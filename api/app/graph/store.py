@@ -46,6 +46,33 @@ def neighbors(db: Session, project_id: str, node_id: str, direction: str) -> lis
     return [db.get(Node, i) for i in ids if db.get(Node, i)]
 
 
+def step_detail(db: Session, project_id: str, step_id: str) -> dict:
+    node = db.get(Node, step_id)
+    touched = [n for n in neighbors(db, project_id, step_id, "out") if n.kind == "code_region"]
+    decision = next(
+        (n.label for n in neighbors(db, project_id, step_id, "out") if n.kind == "decision"), None
+    )
+    return {
+        "node": {
+            "id": node.id,
+            "kind": node.kind,
+            "label": node.label,
+            "status": node.status,
+            "data": node.data,
+        },
+        "diff": [{"path": c.label, "patch": ""} for c in touched],
+        "decision": decision,
+        "acceptance": [{"text": f"{node.label} 확인", "met": node.status == "done"}],
+        "createdNodeIds": [c.id for c in touched],
+        "createdEdgeIds": [
+            e.id
+            for e in db.scalars(
+                select(Edge).where(Edge.project_id == project_id, Edge.src == step_id)
+            ).all()
+        ],
+    }
+
+
 def owning_path(db: Session, project_id: str, node_id: str) -> list[str]:
     order = ["code_region", "step", "ticket", "objective"]
     path = [node_id]
