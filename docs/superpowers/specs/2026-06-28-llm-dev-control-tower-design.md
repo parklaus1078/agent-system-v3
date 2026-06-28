@@ -27,7 +27,7 @@ Kay가 Claude/Codex로 큰 프로젝트를 만들 때의 핵심 고통:
 | 목적 | 내용 | 영향 |
 |---|---|---|
 | 주 | Kay의 실용적 LLM 개발 통제 | 단일 사용자 로컬, 모든 step에 Kay 리뷰 게이트 |
-| 부 | Web Dev → **AX Engineer 커리어 전환** 포트폴리오 | **LangGraph·RAG/pgvector를 *load-bearing*으로** 채택(장식 아님) |
+| 부 | Web Dev → **AX Engineer 커리어 전환** 포트폴리오 | **LangChain·LangGraph·RAG/pgvector를 *load-bearing*으로** 채택(장식 아님) |
 
 ## 3. Decision Log (이 세션에서 확정)
 
@@ -43,6 +43,7 @@ Kay가 Claude/Codex로 큰 프로젝트를 만들 때의 핵심 고통:
 | D8 | 지도의 진실원천 | **git diff** (에이전트 주장 아님) | 지도가 거짓말 안 함 |
 | D9 | 라이프사이클 런타임 | **LangGraph StateGraph + PostgresSaver** (티켓 단위만) | interrupt(정지)·cycle(재실행)·checkpoint(durable)가 요구와 1:1 |
 | D10 | v1 범위 | **한 티켓 수직 슬라이스** (걷는 해골) | 8-phase 과욕 회피 |
+| D11 | 프레임워크 역할 분담 | **LangChain**=RAG 부품(전처리·저장·검색·주입) + Planner 구조화출력 / **LangGraph**=라이프사이클 오케스트레이션·재개 / **Executor**=헤드리스 CLI / **diff→지도**=우리 코드 | 셋 다 *load-bearing*만, 장식 금지 (§5.1) |
 
 > **불변 규칙**: 지도(노드/엣지)는 **관계형**으로 저장한다. RAG/벡터는 *텍스트 회상*에만 쓰고, 지도 탐색에는 절대 쓰지 않는다(퍼지함 = 우리가 탈출하려는 바로 그것).
 
@@ -65,11 +66,26 @@ Kay가 Claude/Codex로 큰 프로젝트를 만들 때의 핵심 고통:
 | 백엔드 | **Python + FastAPI** | 에이전트 헤드리스 호출·git 제어·async |
 | 저장 | **Postgres + pgvector** | 지도=관계형 nodes/edges, 기억=벡터 RAG |
 | 라이프사이클 | **LangGraph StateGraph + PostgresSaver** | 티켓 step 루프의 상태기계(durable·HITL) |
-| 실행 | **헤드리스 CLI step 호출** (`claude -p` / codex, 출력+diff 캡처) | tmux pane 긁기(옛 깨진 곳) 폐기. 결정적 |
+| RAG 기억 | **LangChain** (`Embeddings` + `PGVector` + `TextSplitter` + `retriever`) | RAG가 곧 LangChain 부품 1:1; 임베딩/벡터스토어 교체 1줄 |
+| Planner | **LangChain** `ChatAnthropic.with_structured_output(Pydantic)` | step 목록을 검증된 스키마로 강제(파싱실패·할루시 방어) |
+| 실행(Executor) | **헤드리스 CLI step 호출** (`claude -p` / codex, 출력+diff 캡처) | tmux pane 긁기(옛 깨진 곳) 폐기. 결정적. **LangChain 아님**(아래 §5.1) |
 | 버전관리 | step마다 git commit (대상 프로젝트 레포) | diff = 지도의 진실원천 |
 | 프론트 | **React + Vite + 그래프 뷰 라이브러리**(React Flow류) | 지도가 1차 화면 |
 
 **구분**: **통제탑(이 시스템)** 과 **대상 프로젝트(만들어지는 Todo 앱)** 는 별개. 통제탑이 대상 프로젝트 디렉토리(=그 자체로 git 레포)를 조작하고, step마다 거기에 commit한다. 그래프는 그 레포의 commit/파일을 가리킨다.
+
+### 5.1 프레임워크 책임 분담 (장식 금지, load-bearing만)
+
+| 부품 | 담당 | "무엇을 기록/생성"하나 |
+|---|---|---|
+| **LangChain** | RAG 기억층: 전처리(splitter)·저장(PGVector)·검색(retriever)·주입(context packet) + Planner 구조화 출력 | 임베딩된 텍스트(기억) |
+| **LangGraph** | 티켓 라이프사이클 *오케스트레이션* + 분기 + 재개 (interrupt·cycle·PostgresSaver) | **흐름 상태**(어느 step, 일시정지점) — durable |
+| **우리 코드** ① | 헤드리스 CLI 호출 (Executor — 실제 코딩) | 에이전트 stdout/exit |
+| **우리 코드** ② | **git diff 파싱 → 작업 그래프(지도)** | **무엇이 바뀌었나**(코딩의 진짜 로그) |
+| **우리 코드** ③ | FastAPI API · React 지도 UI | — |
+
+> 핵심 구분: **LangChain = 기억(RAG) 부품. LangGraph = 코딩 *흐름*을 오케스트레이트·재개. git+지도(우리 코드) = 코딩 *결과*를 추적. 헤드리스 CLI = 실제 코딩.**
+> **경계**: ① Executor에 LangChain의 chat-model을 끼우지 않는다 — agentic 코딩(tool-use·파일편집)은 CLI가 *제품으로* 주는 것이고, API 래퍼로는 동급이 안 됨 → 끼우면 장식. ② "코딩 과정 로깅"은 LangGraph가 아니라 git diff→지도가 한다(LangGraph는 *흐름 상태*만 기록).
 
 ## 6. 데이터 모델 — 작업 그래프 (지도)
 
@@ -116,7 +132,12 @@ Step ─produced→ commit(sha)
 
 프로젝트 그래프는 서로 완전히 격리(A 끝나고 B 해도 충돌 없음). 공유되는 건 위층의 "교훈" 한 겹뿐.
 
-**pgvector 기억층**: `Decision` + cross-project 교훈을 임베딩 → 의미검색으로 컨텍스트 패킷·cross-project 회상. (지도 노드/엣지는 관계형, 벡터 아님.)
+**pgvector 기억층 (LangChain RAG 파이프라인)**: `Decision` + cross-project 교훈을 **LangChain**으로 처리 —
+```
+[적재]  (위키/Decision 텍스트) → TextSplitter → Embeddings → PGVector(VectorStore)
+[질의]  Retriever(PGVector+Embeddings) → context packet → (스코프 프롬프트에 주입)
+```
+RAG의 각 단계가 LangChain의 1급 추상화와 1:1로 매핑된다(v2의 손으로 짠 해시 BoW 청킹을 대체). 임베딩 모델·벡터스토어는 인터페이스라 1줄로 교체. **지도 노드/엣지는 관계형(벡터 아님)** — RAG는 *텍스트 회상*에만(불변 규칙).
 
 ## 7. Stepwise 실행 루프 — LangGraph StateGraph
 
@@ -133,8 +154,8 @@ StateGraph(TicketState)
 ```
 
 **노드별 책임**
-- `plan`: Planner 에이전트(헤드리스) 호출 → 작은 step 목록(구조화 출력: 의도·acceptance·예상범위) → `interrupt`로 Kay 분해 승인 대기 → 승인분만 `Step` 노드(pending).
-- `execute_step`: 스코프 프롬프트(§6-③) 조립 → 헤드리스 실행(권한 사전인가, 대상 레포 워크트리) → 파일 작성 → **commit 1개** → diff 캡처 → 그래프 갱신 + 에이전트 요약 → `Decision` 노드.
+- `plan`: **Planner = LangChain** `ChatAnthropic.with_structured_output(PydanticPlan)` 호출 → 작은 step 목록(검증된 스키마: 의도·acceptance·예상범위) → `interrupt`로 Kay 분해 승인 대기 → 승인분만 `Step` 노드(pending). (Planner는 파일을 안 건드리는 *사고* 호출이라 API+구조화출력이 맞음.)
+- `execute_step`: 스코프 프롬프트(§6-③) 조립(LangChain `PromptTemplate`) → **헤드리스 CLI 실행**(권한 사전인가, 대상 레포 워크트리; **LangChain 아님** — agentic 코딩은 CLI가 담당) → 파일 작성 → **commit 1개** → diff 캡처 → 그래프 갱신 + 에이전트 요약 → `Decision` 노드.
 - `review`: `interrupt()`로 정지. Kay가 diff + 지도조각 + 결정 + acceptance 보고 3택.
 - `ingest_diff`: Kay 수동 편집(⏸인수)의 diff를 먹어 그래프 갱신.
 
@@ -196,4 +217,6 @@ StateGraph(TicketState)
 - 대상 프로젝트 레포 위치·격리(워크트리/디렉토리 규약), 백업(`pg_dump` + 레포 git).
 - LangGraph `interrupt`/resume를 FastAPI 요청-응답과 잇는 패턴(웹 리뷰 게이트 ↔ 그래프 일시정지).
 - pgvector 임베딩 모델(로컬 vs API) — v1은 가볍게, 학습 목적상 실제 임베딩 1개.
+- LangChain 패키지 구성(v1.x): `langchain-core` + `langchain-anthropic`(Planner 구조화출력) + `langchain-postgres`(PGVector) + 임베딩 provider. 버전 핀 고정.
+- Planner를 LangChain API 호출로 둘지, 일관성 위해 헤드리스 CLI로 둘지 — 권장은 API(구조화출력 강제가 깔끔). 구현 계획에서 확정.
 ```
