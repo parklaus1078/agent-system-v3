@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../store/useStore';
 import { ProjectMap } from './map/ProjectMap';
 import { Cockpit } from './cockpit/Cockpit';
+import { ReviewPane } from './review/ReviewPane';
 import { SearchIcon, GridIcon } from './icons';
 import './Shell.css';
 
@@ -22,6 +23,8 @@ export function Shell() {
   const load = useStore((s) => s.load);
   const graph = useStore((s) => s.graph);
   const selectedTicketId = useStore((s) => s.selectedTicketId);
+  const selectedStepId = useStore((s) => s.selectedStepId);
+  const reviewOpen = useStore((s) => s.reviewOpen);
   const selectTicket = useStore((s) => s.selectTicket);
   const clock = useElapsedClock();
   const loaded = useRef(false);
@@ -108,7 +111,14 @@ export function Shell() {
         </div>
       </header>
 
-      <main className="shell__main">{altitude === 'map' ? <ProjectMap /> : <Cockpit />}</main>
+      <main className="shell__main">
+        {altitude === 'map' ? <ProjectMap /> : <Cockpit />}
+        {reviewOpen && selectedStepId && (
+          <div className="review-overlay">
+            <ReviewPane />
+          </div>
+        )}
+      </main>
     </div>
   );
 }

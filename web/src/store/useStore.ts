@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { ProjectGraph } from '../domain/graph';
+import { neighbors, type ProjectGraph } from '../domain/graph';
 import type { ApiClient } from '../api/ApiClient';
 import { MockApiClient } from '../api/mock/MockApiClient';
 
@@ -10,9 +10,20 @@ interface State {
   graph: ProjectGraph | null;
   selectedTicketId: string | null;
   selectedStepId: string | null;
+  reviewOpen: boolean; // full-screen review gate overlay
   load: () => Promise<void>;
   selectTicket: (id: string | null) => void;
   selectStep: (id: string | null) => void;
+  openReview: () => void;
+  closeReview: () => void;
+}
+
+/** When a ticket opens, focus the step that needs you — the one awaiting review,
+ *  else the first step — so the cockpit review fills in immediately. */
+function defaultStepFor(graph: ProjectGraph | null, ticketId: string | null): string | null {
+  if (!graph || !ticketId) return null;
+  const steps = neighbors(graph, ticketId, 'out').filter((n) => n.kind === 'step');
+  return (steps.find((s) => s.status === 'awaiting_review') ?? steps[0])?.id ?? null;
 }
 
 export const useStore = create<State>((set, get) => {
@@ -27,9 +38,16 @@ export const useStore = create<State>((set, get) => {
     graph: null,
     selectedTicketId: null,
     selectedStepId: null,
+    reviewOpen: false,
     load: async () => set({ graph: await api.getGraph() }),
-    // Opening a ticket selects it (and drops any open step from a previous ticket).
-    selectTicket: (id) => set({ selectedTicketId: id, selectedStepId: null }),
+    selectTicket: (id) =>
+      set((s) => ({
+        selectedTicketId: id,
+        selectedStepId: defaultStepFor(s.graph, id),
+        reviewOpen: false,
+      })),
     selectStep: (id) => set({ selectedStepId: id }),
+    openReview: () => set({ reviewOpen: true }),
+    closeReview: () => set({ reviewOpen: false }),
   };
 });

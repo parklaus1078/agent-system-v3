@@ -51,7 +51,7 @@
 .rail__obj {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 5px;
   padding: 10px 12px 11px;
   margin-bottom: 14px;
   background: var(--ink);
@@ -59,11 +59,25 @@
   border-radius: 10px;
   box-shadow: var(--shadow-sm);
 }
+.rail__obj-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
 .rail__obj-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-size: 9px;
   font-weight: 600;
   letter-spacing: 0.07em;
   color: #9aa7c0;
+}
+.rail__obj-live {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--live-dot);
 }
 .rail__obj-label {
   font-size: 13px;
@@ -77,7 +91,7 @@
 .rail-ticket {
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: 8px;
   width: 100%;
   padding: 9px 11px 11px;
   border: 1px solid transparent;
@@ -97,7 +111,13 @@
 .rail-ticket__top {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
+}
+.rail-ticket__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex: none;
 }
 .rail-ticket__title {
   flex: 1;
@@ -109,7 +129,13 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.rail-ticket__bottom {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
 .rail-ticket__bar {
+  flex: 1;
   height: 3px;
   border-radius: 2px;
   background: var(--surface-3);
@@ -123,3 +149,10 @@
   height: 100%;
   border-radius: 2px;
 }
+
+/* status dots (color = status) */
+.rf-dot--planning { background: var(--planning); }
+.rf-dot--executing { background: var(--executing); }
+.rf-dot--awaiting_review { background: var(--awaiting); }
+.rf-dot--done { background: var(--done); }
+.rf-dot--blocked { background: var(--blocked); }

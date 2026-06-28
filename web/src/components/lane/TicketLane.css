@@ -61,10 +61,17 @@
   box-shadow: var(--shadow-xs);
 }
 .step__num {
-  font-size: 12px;
-  color: var(--faint);
-  padding-top: 1px;
-  min-width: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: var(--surface-3);
+  color: var(--muted);
+  font-size: 11px;
+  flex: none;
 }
 .step__body {
   flex: 1;
@@ -92,16 +99,14 @@
   text-overflow: ellipsis;
 }
 
-/* the step awaiting your review is emphasized */
+/* the step awaiting your review carries a subtle amber border; its amber
+   status badge is the only status color on the row */
 .step[data-emphasis='true'] {
   border-color: var(--review-bd);
-  background: #fdf8ef;
-  box-shadow: inset 3px 0 0 var(--awaiting);
 }
-.step.is-selected {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.12);
-}
+/* selection uses a soft blue/lavender tint + thin full border (wireframe) */
+.step.is-selected,
 .step[data-emphasis='true'].is-selected {
-  box-shadow: inset 3px 0 0 var(--awaiting), 0 0 0 3px rgba(47, 111, 237, 0.12);
+  background: var(--accent-soft);
+  border-color: var(--accent-soft-border);
 }

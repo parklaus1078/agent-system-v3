@@ -1,6 +1,6 @@
 import { useStore } from '../../store/useStore';
 import { neighbors, type Status } from '../../domain/graph';
-import { LayersIcon } from '../icons';
+import { LayersIcon, TargetIcon } from '../icons';
 
 const RAIL_STATUS_LABEL: Record<Status, string> = {
   planning: 'planning',
@@ -29,7 +29,13 @@ export function CockpitRail() {
 
       {objective && (
         <div className="rail__obj">
-          <span className="rail__obj-kind mono">OBJECTIVE</span>
+          <div className="rail__obj-top">
+            <span className="rail__obj-kind mono">
+              <TargetIcon size={11} />
+              OBJECTIVE
+            </span>
+            <span className="rail__obj-live" aria-hidden="true" />
+          </div>
           <span className="rail__obj-label">{objective.label}</span>
         </div>
       )}
@@ -50,15 +56,15 @@ export function CockpitRail() {
               onClick={() => selectTicket(t.id)}
             >
               <span className="rail-ticket__top">
+                <span className={`rail-ticket__dot rf-dot--${status}`} aria-hidden="true" />
                 <span className="kindtag">{tag}</span>
                 <span className="rail-ticket__title">{t.label}</span>
-                <span className={`pill pill--${status}`}>
-                  <span className="dot" />
-                  {RAIL_STATUS_LABEL[status]}
-                </span>
               </span>
-              <span className="rail-ticket__bar" aria-hidden="true">
-                <span className={`rail-ticket__fill rf-fill--${status}`} style={{ width: `${pct}%` }} />
+              <span className="rail-ticket__bottom">
+                <span className="rail-ticket__bar" aria-hidden="true">
+                  <span className={`rail-ticket__fill rf-fill--${status}`} style={{ width: `${pct}%` }} />
+                </span>
+                <span className={`pill pill--${status}`}>{RAIL_STATUS_LABEL[status]}</span>
               </span>
             </button>
           );
