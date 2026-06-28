@@ -7,8 +7,8 @@ export function makeFixture(): ProjectGraph {
   return {
     nodes: [
       { id: 'obj', kind: 'objective', label: '구독 티어 할일앱', data: { short: '구독 할일앱' } },
-      { id: 't-crud', kind: 'ticket', label: '할일 CRUD', status: 'done' },
-      { id: 't-gate', kind: 'ticket', label: '구독 티어 + 기능 게이팅', status: 'executing' },
+      { id: 't-crud', kind: 'ticket', label: '할일 CRUD', status: 'done', data: { tag: 'CRUD' } },
+      { id: 't-gate', kind: 'ticket', label: '구독 티어 + 기능 게이팅', status: 'executing', data: { tag: 'GATE' } },
       { id: 's1', kind: 'step', label: '할일 모델 + 저장', status: 'done' },
       { id: 's2', kind: 'step', label: '할일 추가 폼', status: 'done' },
       { id: 's3', kind: 'step', label: '티어 플래그 정의', status: 'done' },
