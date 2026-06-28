@@ -19,3 +19,7 @@ dist/
 # UI verification artifacts (screenshots)
 .uiverify/
 .playwright-mcp/
+
+# Python build/venv
+*.egg-info/
+.pytest_cache/
