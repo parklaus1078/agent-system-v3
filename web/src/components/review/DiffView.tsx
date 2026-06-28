@@ -6,19 +6,29 @@ function basename(path: string): string {
   return path.split('/').pop() ?? path;
 }
 
-function lineClass(line: string): string {
-  if (line.startsWith('+++') || line.startsWith('---')) return 'diff-line diff-line--meta';
-  if (line.startsWith('@@')) return 'diff-line diff-line--hunk';
-  if (line.startsWith('+')) return 'diff-line diff-line--add';
-  if (line.startsWith('-')) return 'diff-line diff-line--del';
-  return 'diff-line';
+interface Row {
+  line: string;
+  num: number;
+  cls: 'add' | 'del' | 'ctx';
+}
+
+function toRows(patch: string): Row[] {
+  return patch
+    .replace(/\n$/, '')
+    .split('\n')
+    .filter((l) => !l.startsWith('+++') && !l.startsWith('---') && !l.startsWith('@@'))
+    .map((line, i) => ({
+      line,
+      num: i + 1,
+      cls: line.startsWith('+') ? 'add' : line.startsWith('-') ? 'del' : 'ctx',
+    }));
 }
 
 export function DiffView({ diff }: { diff: DiffBlob[] }) {
   const [active, setActive] = useState(0);
   if (diff.length === 0) return <div className="diff-empty">변경된 파일이 없습니다.</div>;
   const blob = diff[Math.min(active, diff.length - 1)];
-  const lines = blob.patch.replace(/\n$/, '').split('\n');
+  const rows = toRows(blob.patch);
 
   return (
     <div className="diff">
@@ -41,13 +51,16 @@ export function DiffView({ diff }: { diff: DiffBlob[] }) {
         {blob.path}
         <span className="diff__pathnote">· 새 파일</span>
       </div>
-      <pre className="diff__code">
-        {lines.map((line, i) => (
-          <code key={i} className={lineClass(line)}>
-            {line || ' '}
-          </code>
+      <div className="diff__code">
+        {rows.map((r, i) => (
+          <div key={i} className={`diff-line diff-line--${r.cls}`}>
+            <span className="diff-line__num" aria-hidden="true">
+              {r.num}
+            </span>
+            <code className="diff-line__text">{r.line || ' '}</code>
+          </div>
         ))}
-      </pre>
+      </div>
     </div>
   );
 }

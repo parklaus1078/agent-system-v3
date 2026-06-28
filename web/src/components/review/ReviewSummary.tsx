@@ -1,6 +1,6 @@
 import { useStore } from '../../store/useStore';
 import type { Status } from '../../domain/graph';
-import { useStepDetail } from './useStepDetail';
+import { useStepDetail, stepIndexLabel } from './useStepDetail';
 import { DiamondIcon, CheckIcon, ArrowRightIcon, TargetIcon } from '../icons';
 
 const STATUS_LABEL: Record<Status, string> = {
@@ -13,6 +13,7 @@ const STATUS_LABEL: Record<Status, string> = {
 
 /** Compact review shown in the cockpit's right column. "전체 리뷰" opens the gate. */
 export function ReviewSummary() {
+  const graph = useStore((s) => s.graph);
   const selectedStepId = useStore((s) => s.selectedStepId);
   const api = useStore((s) => s.api);
   const openReview = useStore((s) => s.openReview);
@@ -33,7 +34,7 @@ export function ReviewSummary() {
   return (
     <div className="rsum">
       <div className="rsum__head">
-        <span className="kindtag">step</span>
+        <span className="kindtag rsum__step">{stepIndexLabel(graph, selectedStepId)}</span>
         <span className={`pill pill--${status}`}>
           <span className="dot" />
           {STATUS_LABEL[status]}

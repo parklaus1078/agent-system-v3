@@ -73,7 +73,7 @@
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 392px;
+  grid-template-columns: minmax(0, 1fr) 420px;
 }
 .review__left {
   min-width: 0;
@@ -143,14 +143,27 @@
 }
 .diff__code {
   margin: 0;
-  padding: 8px 0 16px;
+  padding: 6px 0 16px;
   font-family: var(--mono);
   font-size: 12.5px;
-  line-height: 1.6;
+  line-height: 1.7;
   overflow-x: auto;
 }
 .diff-line {
-  display: block;
+  display: flex;
+  align-items: stretch;
+}
+.diff-line__num {
+  flex: none;
+  width: 44px;
+  padding: 0 10px 0 14px;
+  text-align: right;
+  color: var(--faint);
+  user-select: none;
+  border-right: 1px solid var(--border);
+}
+.diff-line__text {
+  flex: 1;
   padding: 0 14px;
   white-space: pre;
 }
@@ -158,16 +171,17 @@
   background: #e7f6ec;
   color: #157a43;
 }
+.diff-line--add .diff-line__num {
+  color: #5aa97a;
+  border-color: #cce8d6;
+}
 .diff-line--del {
   background: #fceaea;
   color: #bb2d2d;
 }
-.diff-line--meta {
-  color: var(--faint);
-}
-.diff-line--hunk {
-  color: var(--accent-ink);
-  background: var(--accent-soft);
+.diff-line--del .diff-line__num {
+  color: #d09696;
+  border-color: #f0cfcd;
 }
 .diff-empty {
   padding: 24px;
@@ -218,6 +232,29 @@
   border: 1px solid var(--border);
   border-radius: 7px;
   background: var(--surface-2);
+}
+.rev-slice__main {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+.rev-slice__main > :last-child {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rev-glyph {
+  flex: none;
+}
+.rev-glyph--code {
+  color: var(--accent-ink);
+}
+.rev-glyph--test {
+  color: var(--done);
+}
+.rev-glyph--dec {
+  color: var(--decision);
 }
 .rev-tag {
   font-family: var(--mono);
@@ -404,6 +441,12 @@
   align-items: center;
   gap: 8px;
 }
+.rsum__step {
+  color: var(--ink-2);
+}
+.rsum__decision-head .kindtag {
+  color: var(--decision);
+}
 .rsum__title {
   margin: 0;
   font-size: 15px;
@@ -457,7 +500,7 @@
   color: var(--done);
 }
 .rsum__actions {
-  margin-top: auto;
+  margin-top: 2px;
   display: flex;
   gap: 8px;
 }

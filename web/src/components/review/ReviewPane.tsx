@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useStore } from '../../store/useStore';
 import type { Status } from '../../domain/graph';
 import { DiffView } from './DiffView';
-import { useStepDetail } from './useStepDetail';
+import { useStepDetail, stepIndexLabel } from './useStepDetail';
 import {
   ChevronRightIcon,
   CheckIcon,
@@ -83,7 +83,7 @@ export function ReviewPane() {
         </button>
         <span className={`review__badge pill pill--${status}`}>
           <span className="dot" />
-          step · {STATUS_LABEL[status]}
+          {stepIndexLabel(graph, selectedStepId)} · {STATUS_LABEL[status]}
         </span>
         <h2 className="review__title">{node.label}</h2>
         <span className="review__stats mono">
@@ -109,19 +109,28 @@ export function ReviewPane() {
             <ul className="rev-slice">
               {detail.createdNodeIds.map((id) => (
                 <li key={id} className="rev-slice__row">
-                  <span className="mono">{labelOf(id)}</span>
+                  <span className="rev-slice__main">
+                    <CodeIcon size={13} className="rev-glyph rev-glyph--code" />
+                    <span className="mono">{labelOf(id)}</span>
+                  </span>
                   <span className="rev-tag rev-tag--code">CodeRegion · NEW</span>
                 </li>
               ))}
               {testNodes.map((t) => (
                 <li key={t.id} className="rev-slice__row">
-                  <span className="mono">{t.label}</span>
+                  <span className="rev-slice__main">
+                    <FlaskIcon size={13} className="rev-glyph rev-glyph--test" />
+                    <span className="mono">{t.label}</span>
+                  </span>
                   <span className="rev-tag rev-tag--test">tested_by</span>
                 </li>
               ))}
               {detail.decision && (
                 <li className="rev-slice__row">
-                  <span>{detail.decision}</span>
+                  <span className="rev-slice__main">
+                    <DiamondIcon size={13} className="rev-glyph rev-glyph--dec" />
+                    <span>{detail.decision}</span>
+                  </span>
                   <span className="rev-tag rev-tag--dec">decided</span>
                 </li>
               )}
@@ -131,7 +140,7 @@ export function ReviewPane() {
           {detail.decision && (
             <section className="rev-card">
               <div className="rev-card__head">
-                <DiamondIcon size={14} />
+                <DiamondIcon size={14} className="rev-glyph--dec" />
                 <span>Decision — 왜</span>
               </div>
               <p className="rev-decision">{detail.decision}</p>
@@ -181,7 +190,9 @@ export function ReviewPane() {
       </div>
 
       <footer className="review__actions">
-        <div className="review__hint mono">step 게이트 — 당신의 결정을 기다립니다</div>
+        <div className="review__hint mono">
+          {stepIndexLabel(graph, selectedStepId)} 게이트 — 당신의 결정을 기다립니다
+        </div>
         <div className="review__btns">
           <button className="rev-act" onClick={() => setCommenting((v) => !v)}>
             <EditIcon size={15} />
