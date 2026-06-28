@@ -42,7 +42,7 @@ export function ObjectiveNode({ data }: NodeProps) {
       <Handles target={false} />
       <div className="rf-objective__head">
         <span className="rf-objective__kind">
-          <TargetIcon size={12} />
+          <TargetIcon size={12} className="rf-objective__icon" />
           OBJECTIVE
         </span>
         {d.live && (
@@ -144,10 +144,17 @@ export function TestNode({ data }: NodeProps) {
   );
 }
 
+// Invisible node used to extend the layout's bounding box so fitView top-anchors
+// the real content instead of vertically centering it.
+function SpacerNode() {
+  return <div style={{ width: 1, height: 1 }} aria-hidden="true" />;
+}
+
 export const nodeTypes = {
   objective: ObjectiveNode,
   ticket: TicketNode,
   decision: DecisionNode,
   code_region: CodeRegionNode,
   test: TestNode,
+  spacer: SpacerNode,
 };

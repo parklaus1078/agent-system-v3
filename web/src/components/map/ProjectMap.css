@@ -42,6 +42,9 @@
   letter-spacing: 0.06em;
   color: #9aa7c0;
 }
+.rf-objective__icon {
+  color: #7fa8f5; /* accent blue, as in the wireframe */
+}
 .rf-objective__live {
   display: inline-flex;
   align-items: center;
@@ -213,14 +216,15 @@
   align-items: center;
   gap: 7px;
   height: 32px;
-  padding: 0 12px;
-  border-radius: var(--r-sm);
-  background: var(--review-bg);
-  border: 1px solid var(--review-bd);
-  color: var(--review-fg);
+  padding: 0 6px;
+  background: transparent;
+  color: var(--ink-2);
   font-size: 12.5px;
 }
-.map-banner b { font-weight: 700; }
+.map-banner b {
+  font-weight: 700;
+  color: var(--ink);
+}
 .map-banner__dot {
   width: 6px;
   height: 6px;

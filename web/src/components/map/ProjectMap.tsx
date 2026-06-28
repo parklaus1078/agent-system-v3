@@ -10,7 +10,14 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useStore } from '../../store/useStore';
-import { neighbors, type ProjectGraph, type GraphNode, type EdgeKind, type Status } from '../../domain/graph';
+import {
+  neighbors,
+  ticketDisplayStatus,
+  type ProjectGraph,
+  type GraphNode,
+  type EdgeKind,
+  type Status,
+} from '../../domain/graph';
 import { nodeTypes } from './nodeTypes';
 import { LayersIcon, PlusIcon } from '../icons';
 import './ProjectMap.css';
@@ -148,7 +155,7 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
         data: {
           tag: (t.data?.tag as string) ?? t.label.slice(0, 4).toUpperCase(),
           label: t.label,
-          status: t.status ?? 'planning',
+          status: ticketDisplayStatus(graph, t.id),
           done: meta.done,
           total: meta.total,
           hint: meta.hint,
@@ -180,6 +187,17 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
         }),
       );
 
+    // invisible spacer extends the bbox downward so fitView top-anchors the graph
+    rfNodes.push({
+      id: '__spacer',
+      type: 'spacer',
+      position: { x: 0, y: 760 },
+      data: {},
+      draggable: false,
+      selectable: false,
+      focusable: false,
+    });
+
     // collapse steps to their owning ticket so edges stay coherent without step nodes
     const rep = (id: string): string | null => {
       const node = graph.nodes.find((n) => n.id === id);
@@ -206,12 +224,18 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
       });
     }
 
-    // awaiting-review banner names the step that awaits your review (the amber
-    // status belongs to the step, not its still-executing ticket)
+    // awaiting-review banner: the ticket owning the step awaiting your review.
+    // That ticket badges amber 'review' (ticketDisplayStatus), so the banner
+    // subject and the node badge agree — matching the wireframe.
     const awaitingStep = graph.nodes.find((n) => n.kind === 'step' && n.status === 'awaiting_review');
-    const bannerStep = awaitingStep?.label ?? null;
+    let bannerTag: string | null = null;
+    if (awaitingStep) {
+      const owner = ownerTicketId(graph, awaitingStep.id);
+      const t = graph.nodes.find((n) => n.id === owner);
+      bannerTag = (t?.data?.tag as string) ?? t?.label ?? null;
+    }
 
-    return { nodes: rfNodes, edges: rfEdges, banner: bannerStep };
+    return { nodes: rfNodes, edges: rfEdges, banner: bannerTag };
   }, [graph, effectiveShowCode, highlightIds]);
 
   return (
@@ -232,7 +256,7 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
       zoomOnDoubleClick={false}
       proOptions={{ hideAttribution: true }}
     >
-      <Background variant={BackgroundVariant.Dots} gap={23} size={1.1} color="#dde2e9" />
+      <Background variant={BackgroundVariant.Dots} gap={23} size={1.6} color="#ccd3dd" />
       <Panel position="top-left">
         <div className="map-controls">
           <button

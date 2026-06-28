@@ -1,5 +1,5 @@
 import { useStore } from '../../store/useStore';
-import { neighbors, type Status } from '../../domain/graph';
+import { neighbors, ticketDisplayStatus, type Status } from '../../domain/graph';
 import { LayersIcon, TargetIcon } from '../icons';
 
 const RAIL_STATUS_LABEL: Record<Status, string> = {
@@ -42,7 +42,7 @@ export function CockpitRail() {
 
       <div className="rail__list">
         {tickets.map((t) => {
-          const status = t.status ?? 'planning';
+          const status = ticketDisplayStatus(graph, t.id);
           const steps = neighbors(graph, t.id, 'out').filter((n) => n.kind === 'step');
           const done = steps.filter((s) => s.status === 'done').length;
           const pct = steps.length > 0 ? Math.round((done / steps.length) * 100) : 0;

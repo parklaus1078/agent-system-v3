@@ -105,16 +105,16 @@
 .plan-step__input {
   flex: 1;
   min-width: 0;
-  height: 32px;
-  padding: 0 10px;
+  height: 30px;
+  padding: 0 8px;
   border: 1px solid transparent;
   border-radius: 6px;
-  background: var(--surface-2);
+  background: transparent; /* seamless on the row card — no box-in-box */
   font-size: 13.5px;
   outline: none;
 }
 .plan-step__input:hover {
-  border-color: var(--border);
+  background: var(--surface-2);
 }
 .plan-step__input:focus {
   border-color: var(--accent);

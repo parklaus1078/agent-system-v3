@@ -25,6 +25,17 @@ export interface ProjectGraph {
   edges: GraphEdge[];
 }
 
+/** A ticket's display status reflects its active step's gate: a ticket with a
+ *  step awaiting review reads as `awaiting_review` (and blocked likewise), so the
+ *  badge agrees with the review banner. Otherwise it's the ticket's own status. */
+export function ticketDisplayStatus(g: ProjectGraph, ticketId: string): Status {
+  const t = g.nodes.find((n) => n.id === ticketId);
+  const steps = neighbors(g, ticketId, 'out').filter((n) => n.kind === 'step');
+  if (steps.some((s) => s.status === 'awaiting_review')) return 'awaiting_review';
+  if (steps.some((s) => s.status === 'blocked')) return 'blocked';
+  return t?.status ?? 'planning';
+}
+
 /** Direct neighbours of `nodeId` following edges in the given direction. */
 export function neighbors(g: ProjectGraph, nodeId: string, dir: 'in' | 'out' | 'both'): GraphNode[] {
   const byId = new Map(g.nodes.map((n) => [n.id, n]));
