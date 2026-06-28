@@ -219,4 +219,3 @@ StateGraph(TicketState)
 - pgvector 임베딩 모델(로컬 vs API) — v1은 가볍게, 학습 목적상 실제 임베딩 1개.
 - LangChain 패키지 구성(v1.x): `langchain-core` + `langchain-anthropic`(Planner 구조화출력) + `langchain-postgres`(PGVector) + 임베딩 provider. 버전 핀 고정.
 - Planner를 LangChain API 호출로 둘지, 일관성 위해 헤드리스 CLI로 둘지 — 권장은 API(구조화출력 강제가 깔끔). 구현 계획에서 확정.
-```
