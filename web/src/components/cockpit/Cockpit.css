@@ -1,0 +1,125 @@
+.cockpit {
+  display: grid;
+  grid-template-columns: 252px minmax(0, 1fr) 392px;
+  height: 100%;
+  min-height: 0;
+  background: var(--surface-2);
+}
+.cockpit__rail {
+  min-height: 0;
+  overflow: auto;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+}
+.cockpit__lane {
+  min-width: 0;
+  min-height: 0;
+}
+.cockpit__review {
+  min-height: 0;
+  overflow: auto;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+}
+.cockpit__review-empty {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px;
+  text-align: center;
+  color: var(--faint);
+}
+.cockpit__review-empty p {
+  margin: 0;
+  font-size: 13px;
+}
+
+/* ---- left rail ---- */
+.rail {
+  padding: 14px 14px 22px;
+}
+.rail__head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  padding: 2px 4px 13px;
+}
+.rail__obj {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px 11px;
+  margin-bottom: 14px;
+  background: var(--ink);
+  color: #fff;
+  border-radius: 10px;
+  box-shadow: var(--shadow-sm);
+}
+.rail__obj-kind {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  color: #9aa7c0;
+}
+.rail__obj-label {
+  font-size: 13px;
+  font-weight: 600;
+}
+.rail__list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.rail-ticket {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  width: 100%;
+  padding: 9px 11px 11px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+.rail-ticket:hover {
+  background: var(--surface-3);
+}
+.rail-ticket.is-active {
+  background: var(--accent-soft);
+  border-color: var(--accent-soft-border);
+}
+.rail-ticket__top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rail-ticket__title {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rail-ticket__bar {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--surface-3);
+  overflow: hidden;
+}
+.rail-ticket.is-active .rail-ticket__bar {
+  background: rgba(47, 111, 237, 0.16);
+}
+.rail-ticket__fill {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+}

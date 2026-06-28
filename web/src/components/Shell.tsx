@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../store/useStore';
 import { ProjectMap } from './map/ProjectMap';
-import { TicketLane } from './lane/TicketLane';
+import { Cockpit } from './cockpit/Cockpit';
 import { SearchIcon, GridIcon } from './icons';
 import './Shell.css';
 
@@ -108,7 +108,7 @@ export function Shell() {
         </div>
       </header>
 
-      <main className="shell__main">{altitude === 'map' ? <ProjectMap /> : <TicketLane />}</main>
+      <main className="shell__main">{altitude === 'map' ? <ProjectMap /> : <Cockpit />}</main>
     </div>
   );
 }
