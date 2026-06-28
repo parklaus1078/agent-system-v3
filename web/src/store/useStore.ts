@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { neighbors, type ProjectGraph } from '../domain/graph';
 import type { ApiClient } from '../api/ApiClient';
 import { MockApiClient } from '../api/mock/MockApiClient';
+import { HttpApiClient } from '../api/http/HttpApiClient';
 
 export type Altitude = 'map' | 'lane';
 
@@ -27,7 +28,9 @@ function defaultStepFor(graph: ProjectGraph | null, ticketId: string | null): st
 }
 
 export const useStore = create<State>((set, get) => {
-  const api = new MockApiClient();
+  // Swap to the real backend by setting VITE_API_BASE; otherwise run on the mock.
+  const apiBase = import.meta.env.VITE_API_BASE;
+  const api: ApiClient = apiBase ? new HttpApiClient(apiBase, 'p1') : new MockApiClient();
   // Always live: any state change in the API re-loads the graph, so every screen
   // reflects the new state without a manual refresh control.
   api.subscribe(() => {
