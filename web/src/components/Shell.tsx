@@ -4,6 +4,9 @@ import { ProjectMap } from './map/ProjectMap';
 import { Cockpit } from './cockpit/Cockpit';
 import { ReviewPane } from './review/ReviewPane';
 import { BugTrace } from './bugtrace/BugTrace';
+import { Modal } from './Modal';
+import { GoalEntry } from './goal/GoalEntry';
+import { PlanApproval } from './plan/PlanApproval';
 import { GridIcon } from './icons';
 import './Shell.css';
 
@@ -30,6 +33,8 @@ export function Shell() {
   const clock = useElapsedClock();
   const loaded = useRef(false);
   const [highlightIds, setHighlightIds] = useState<string[] | null>(null);
+  const [goalFlow, setGoalFlow] = useState<'none' | 'goal' | 'plan'>('none');
+  const [pendingGoal, setPendingGoal] = useState('');
 
   useEffect(() => {
     if (!loaded.current) {
@@ -115,11 +120,38 @@ export function Shell() {
       </header>
 
       <main className="shell__main">
-        {altitude === 'map' ? <ProjectMap highlightIds={highlightIds ?? undefined} /> : <Cockpit />}
+        {altitude === 'map' ? (
+          <ProjectMap
+            highlightIds={highlightIds ?? undefined}
+            onNewGoal={() => setGoalFlow('goal')}
+          />
+        ) : (
+          <Cockpit />
+        )}
         {reviewOpen && selectedStepId && (
           <div className="review-overlay">
             <ReviewPane />
           </div>
+        )}
+        {goalFlow === 'goal' && (
+          <Modal onClose={() => setGoalFlow('none')}>
+            <GoalEntry
+              onCancel={() => setGoalFlow('none')}
+              onSubmit={(goal) => {
+                setPendingGoal(goal);
+                setGoalFlow('plan');
+              }}
+            />
+          </Modal>
+        )}
+        {goalFlow === 'plan' && (
+          <Modal onClose={() => setGoalFlow('none')}>
+            <PlanApproval
+              goal={pendingGoal}
+              onCancel={() => setGoalFlow('none')}
+              onApproved={() => setGoalFlow('none')}
+            />
+          </Modal>
         )}
       </main>
     </div>
