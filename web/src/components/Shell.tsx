@@ -3,7 +3,8 @@ import { useStore } from '../store/useStore';
 import { ProjectMap } from './map/ProjectMap';
 import { Cockpit } from './cockpit/Cockpit';
 import { ReviewPane } from './review/ReviewPane';
-import { SearchIcon, GridIcon } from './icons';
+import { BugTrace } from './bugtrace/BugTrace';
+import { GridIcon } from './icons';
 import './Shell.css';
 
 /** Elapsed session clock shown as HH:MM:SS in the top bar (the "live" feel). */
@@ -28,6 +29,7 @@ export function Shell() {
   const selectTicket = useStore((s) => s.selectTicket);
   const clock = useElapsedClock();
   const loaded = useRef(false);
+  const [highlightIds, setHighlightIds] = useState<string[] | null>(null);
 
   useEffect(() => {
     if (!loaded.current) {
@@ -35,6 +37,17 @@ export function Shell() {
       void load();
     }
   }, [load]);
+
+  // Opening a ticket (cockpit) clears any trace highlight on the map.
+  useEffect(() => {
+    if (selectedTicketId) setHighlightIds(null);
+  }, [selectedTicketId]);
+
+  // Tracing a file highlights its owning path on the map (so jump to the map).
+  const handleHighlight = (ids: string[]) => {
+    setHighlightIds(ids.length ? ids : null);
+    selectTicket(null);
+  };
 
   const objective = graph?.nodes.find((n) => n.kind === 'objective');
   const projectName = (objective?.data?.short as string | undefined) ?? objective?.label ?? '';
@@ -69,17 +82,7 @@ export function Shell() {
         </div>
 
         <div className="topbar__center">
-          <div className="trace">
-            <span className="trace__icon">
-              <SearchIcon size={15} />
-            </span>
-            <input
-              className="trace__input mono"
-              type="search"
-              aria-label="추적"
-              placeholder="추적: 파일 · 심볼 · UI 요소"
-            />
-          </div>
+          <BugTrace onHighlight={handleHighlight} />
         </div>
 
         <div className="topbar__right">
@@ -112,7 +115,7 @@ export function Shell() {
       </header>
 
       <main className="shell__main">
-        {altitude === 'map' ? <ProjectMap /> : <Cockpit />}
+        {altitude === 'map' ? <ProjectMap highlightIds={highlightIds ?? undefined} /> : <Cockpit />}
         {reviewOpen && selectedStepId && (
           <div className="review-overlay">
             <ReviewPane />

@@ -77,7 +77,17 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
   const selectTicket = useStore((s) => s.selectTicket);
   const [showCode, setShowCode] = useState(false);
 
-  const dim = (id: string) => (highlightIds ? !highlightIds.includes(id) : false);
+  const active = !!highlightIds && highlightIds.length > 0;
+  const dim = (id: string) => (active ? !highlightIds!.includes(id) : false);
+  // a trace onto a code/test region auto-reveals the code layer so its node shows
+  const codeHighlighted =
+    active &&
+    !!graph &&
+    highlightIds!.some((id) => {
+      const n = graph.nodes.find((nn) => nn.id === id);
+      return n?.kind === 'code_region' || n?.kind === 'test';
+    });
+  const effectiveShowCode = showCode || codeHighlighted;
 
   const { nodes, edges, banner } = useMemo(() => {
     if (!graph) return { nodes: [] as Node[], edges: [] as Edge[], banner: null as string | null };
@@ -117,7 +127,7 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
     if (objective) visible.add(objective.id);
     tickets.forEach((t) => visible.add(t.id));
     decisions.forEach((d) => visible.add(d.id));
-    if (showCode) codes.forEach((c) => visible.add(c.id));
+    if (effectiveShowCode) codes.forEach((c) => visible.add(c.id));
 
     const rfNodes: Node[] = [];
     if (objective)
@@ -158,7 +168,7 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
         selectable: false,
       }),
     );
-    if (showCode)
+    if (effectiveShowCode)
       codes.forEach((c) =>
         rfNodes.push({
           id: c.id,
@@ -186,7 +196,7 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
       const key = `${a}->${b}:${e.kind}`;
       if (seen.has(key)) continue;
       seen.add(key);
-      const faded = highlightIds ? !(highlightIds.includes(a) && highlightIds.includes(b)) : false;
+      const faded = active ? !(highlightIds!.includes(a) && highlightIds!.includes(b)) : false;
       rfEdges.push({
         id: key,
         source: a,
@@ -196,18 +206,13 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
       });
     }
 
-    // awaiting-review banner: the ticket owning a step that awaits your review
+    // awaiting-review banner names the step that awaits your review (the amber
+    // status belongs to the step, not its still-executing ticket)
     const awaitingStep = graph.nodes.find((n) => n.kind === 'step' && n.status === 'awaiting_review');
-    let bannerTag: string | null = null;
-    if (awaitingStep) {
-      const owner = ownerTicketId(graph, awaitingStep.id);
-      const t = graph.nodes.find((n) => n.id === owner);
-      bannerTag = (t?.data?.tag as string) ?? t?.label ?? null;
-    }
+    const bannerStep = awaitingStep?.label ?? null;
 
-    return { nodes: rfNodes, edges: rfEdges, banner: bannerTag };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [graph, showCode, highlightIds]);
+    return { nodes: rfNodes, edges: rfEdges, banner: bannerStep };
+  }, [graph, effectiveShowCode, highlightIds]);
 
   return (
     <ReactFlow
@@ -232,7 +237,7 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
         <div className="map-controls">
           <button
             className="map-toggle"
-            aria-pressed={showCode}
+            aria-pressed={effectiveShowCode}
             onClick={() => setShowCode((v) => !v)}
           >
             <LayersIcon size={15} />

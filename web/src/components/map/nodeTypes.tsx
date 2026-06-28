@@ -126,7 +126,7 @@ export function CodeRegionNode({ data }: NodeProps) {
   const d = data as CodeData;
   return (
     <div className={`rf-code${d.dimmed ? ' is-dimmed' : ''}`}>
-      <Handles source={false} />
+      <Handles />
       <CodeIcon size={13} />
       <span className="rf-code__label mono">{d.label}</span>
     </div>
