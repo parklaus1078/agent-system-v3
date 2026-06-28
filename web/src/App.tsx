@@ -1,3 +1,5 @@
+import { Shell } from './components/Shell';
+
 export default function App() {
-  return <div className="app">LLM Dev Control Tower</div>;
+  return <Shell />;
 }

@@ -1,0 +1,169 @@
+/* Design tokens — light developer-console, sampled from the wireframe
+   (docs/design/wireframes/llm-dev-control-tower.html). Two orthogonal axes:
+   node kind = shape/icon, status = color. */
+
+:root {
+  /* surfaces & ink */
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --surface-2: #fafbfc;
+  --surface-3: #f1f3f6;
+  --ink: #1c2024;
+  --ink-2: #3a4150;
+  --muted: #6b7280;
+  --faint: #9aa7c0;
+
+  /* lines */
+  --border: #e3e6eb;
+  --border-strong: #cdd3db;
+  --border-hover: #d2d7df;
+
+  /* brand / primary accent (executing & focus) */
+  --accent: #2f6fed;
+  --accent-ink: #1f57c8;
+  --accent-soft: #eaf1fe;
+  --accent-soft-border: #c5dbf9;
+
+  /* status colors (legend) */
+  --planning: #6b7280;
+  --executing: #2f6fed;
+  --awaiting: #e08a16;
+  --done: #28a866;
+  --blocked: #e24a4a;
+  --live-dot: #28a866; /* session "live" pulse — shares the wireframe's positive green */
+  --clock: #b6bcc5; /* de-emphasized elapsed-time readout */
+
+  /* status soft pills: bg / text / border */
+  --done-bg: #e7f5ec;       --done-fg: #157a43;     --done-bd: #bfe6cd;
+  --review-bg: #fbf1df;     --review-fg: #9a6a00;   --review-bd: #f0d9b0;
+  --planning-bg: #eef0f3;   --planning-fg: #5b6470; --planning-bd: #dde1e7;
+  --blocked-bg: #fceaea;    --blocked-fg: #bb2d2d;  --blocked-bd: #f3c9c7;
+  --exec-bg: #eaf1fe;       --exec-fg: #2f6fed;     --exec-bd: #c5dbf9;
+
+  /* decision (purple) */
+  --decision: #7c6bd6;
+  --decision-soft: #f1eefc;
+  --decision-bd: #ddd6f5;
+
+  /* typography */
+  --sans: 'IBM Plex Sans', system-ui, -apple-system, 'Noto Sans KR', sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* radii */
+  --r-xs: 5px;
+  --r-sm: 7px;
+  --r: 9px;
+  --r-md: 11px;
+  --r-lg: 14px;
+
+  /* shadows */
+  --shadow-xs: 0 1px 2px rgba(20, 30, 50, 0.05);
+  --shadow-sm: 0 2px 8px rgba(20, 30, 50, 0.06);
+  --shadow-md: 0 4px 14px rgba(20, 30, 50, 0.08);
+  --shadow-lg: 0 6px 20px rgba(20, 30, 50, 0.16);
+
+  /* metrics */
+  --topbar-h: 52px;
+  --subbar-h: 46px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.mono {
+  font-family: var(--mono);
+  font-feature-settings: 'ss01';
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+input,
+textarea {
+  font-family: inherit;
+}
+
+/* dotted-grid canvas (map background) */
+.dotgrid {
+  background-color: var(--bg);
+  background-image: radial-gradient(var(--border-strong) 1.1px, transparent 1.1px);
+  background-size: 23px 23px;
+}
+
+/* status pill (color = status) */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 1px 7px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.6;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.pill .dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+.pill--done { background: var(--done-bg); color: var(--done-fg); border-color: var(--done-bd); }
+.pill--review,
+.pill--awaiting_review { background: var(--review-bg); color: var(--review-fg); border-color: var(--review-bd); }
+.pill--planning { background: var(--planning-bg); color: var(--planning-fg); border-color: var(--planning-bd); }
+.pill--blocked { background: var(--blocked-bg); color: var(--blocked-fg); border-color: var(--blocked-bd); }
+.pill--executing { background: var(--exec-bg); color: var(--exec-fg); border-color: var(--exec-bd); }
+
+/* kind tag (monospace uppercase label, e.g. AUTH / OBJECTIVE) */
+.kindtag {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+/* accessible-only text */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* thin custom scrollbars to match the console feel */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+*::-webkit-scrollbar { width: 9px; height: 9px; }
+*::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 999px; border: 2px solid var(--bg); }
+*::-webkit-scrollbar-track { background: transparent; }
