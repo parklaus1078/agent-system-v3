@@ -46,6 +46,48 @@ def neighbors(db: Session, project_id: str, node_id: str, direction: str) -> lis
     return [db.get(Node, i) for i in ids if db.get(Node, i)]
 
 
+_REVIEW_NEXT = {"approve": "done", "changes": "executing", "takeover": "awaiting_review"}
+
+
+def review_step(db: Session, project_id: str, step_id: str, kind: str) -> dict:
+    """Apply a review decision to a step and persist the new status."""
+    node = db.get(Node, step_id)
+    if node is None or node.project_id != project_id:
+        return {"ok": False}
+    node.status = _REVIEW_NEXT.get(kind, node.status)
+    db.commit()
+    return {"ok": True, "status": node.status}
+
+
+def approve_plan(db: Session, project_id: str, ticket_id: str, step_labels: list[str]) -> dict:
+    """Replace a ticket's steps with the approved list and start execution.
+    Persists new step nodes + `has` edges; removes the old step children."""
+    has_edges = db.scalars(
+        select(Edge).where(
+            Edge.project_id == project_id, Edge.src == ticket_id, Edge.kind == "has"
+        )
+    ).all()
+    for e in has_edges:
+        child = db.get(Node, e.dst)
+        if child is not None and child.kind == "step":
+            db.delete(child)
+            db.delete(e)
+    db.flush()
+
+    created: list[str] = []
+    for i, label in enumerate(step_labels):
+        sid = f"{ticket_id}-s{i + 1}"
+        db.add(Node(id=sid, project_id=project_id, kind="step", label=label, status="planning"))
+        db.add(Edge(id=f"has-{ticket_id}-{i + 1}", project_id=project_id, src=ticket_id, dst=sid, kind="has"))
+        created.append(sid)
+
+    ticket = db.get(Node, ticket_id)
+    if ticket is not None:
+        ticket.status = "executing"
+    db.commit()
+    return {"ticketId": ticket_id, "stepIds": created}
+
+
 def step_detail(db: Session, project_id: str, step_id: str) -> dict:
     node = db.get(Node, step_id)
     touched = [n for n in neighbors(db, project_id, step_id, "out") if n.kind == "code_region"]

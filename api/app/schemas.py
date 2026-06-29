@@ -42,3 +42,28 @@ class StepDetailOut(BaseModel):
     acceptance: list[Acceptance] = []
     createdNodeIds: list[str] = []
     createdEdgeIds: list[str] = []
+
+
+class ReviewActionIn(BaseModel):
+    kind: str  # approve | changes | takeover
+    comment: str | None = None
+
+
+class PlanStep(BaseModel):
+    label: str
+    intent: str = ""
+    acceptance: str = ""
+
+
+class ProposeIn(BaseModel):
+    goal: str
+
+
+class PlanProposalOut(BaseModel):
+    ticketId: str
+    steps: list[PlanStep] = []
+
+
+class ApproveIn(BaseModel):
+    ticketId: str
+    steps: list[PlanStep] = []
