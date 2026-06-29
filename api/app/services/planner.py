@@ -83,4 +83,6 @@ class CliPlanner:
             capture_output=True,
             text=True,
         )
+        if proc.returncode != 0:
+            raise RuntimeError(f"claude planner failed (exit {proc.returncode}): {proc.stderr[:300]}")
         return self._parse(proc.stdout)

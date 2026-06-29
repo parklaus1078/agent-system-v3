@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 import re
 
@@ -21,6 +22,7 @@ from ..services.planner import CliPlanner, LangChainPlanner, SimulatedPlanner
 from ..services.prompt_build import build_step_prompt
 
 router = APIRouter(prefix="/projects/{pid}", tags=["lifecycle"])
+logger = logging.getLogger("asv3.lifecycle")
 
 _REVIEW_STATUS = {"approve": "done", "changes": "executing", "takeover": "awaiting_review"}
 
@@ -66,7 +68,11 @@ def _build(db: Session, pid: str, tid: str, title: str | None = None):
     def on_step_committed(i: int, sha: str | None, summary: str, decision: str | None) -> None:
         sid = f"{tid}-s{i + 1}"
         if sha:  # None => executor made no edits; still gate the step, just no diff
-            apply_step_diff(db, pid, sid, sha, diff_of_commit(repo, sha))
+            try:
+                apply_step_diff(db, pid, sid, sha, diff_of_commit(repo, sha))
+            except Exception:  # git/diff failure must not strand the step un-gated
+                db.rollback()  # discard any partial ingest; the status update below still lands
+                logger.exception("diff ingest failed for step %s (commit %s)", sid, sha)
         node = db.get(Node, sid)
         if node is not None:
             node.status = "awaiting_review"
@@ -131,6 +137,10 @@ def start_plan(pid: str, tid: str, body: PlanStartIn, db: Session = Depends(get_
     awaiting = _awaiting(snap)
     if awaiting and awaiting.get("type") == "plan_approval":
         return _payload(tid, snap)  # already proposed; return the pending plan
+    if snap.values:
+        # graph already started (mid-execution or done) — re-invoking with a fresh
+        # state would reset the checkpoint out of sync with the DB. Return as-is.
+        return _payload(tid, snap)
 
     obj = _objective(db, pid)
     existing = db.get(Node, tid)

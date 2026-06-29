@@ -20,8 +20,20 @@ def build_step_prompt(
     """Scoped step prompt: the pinned Objective, the ticket, the step, the
     CodeRegions the ticket already owns and its prior Decisions — not the whole repo."""
     ticket = db.get(Node, ticket_id)
-    owned = [n.label for n in neighbors(db, project_id, ticket_id, "out") if n.kind == "code_region"]
-    decisions = [n.label for n in neighbors(db, project_id, ticket_id, "out") if n.kind == "decision"]
+    # Code regions and decisions hang off the ticket's STEPS (touches/decided edges
+    # have src=step), so aggregate across the steps — querying the ticket directly
+    # finds nothing. This is the prior context that scopes the current step.
+    steps = [n for n in neighbors(db, project_id, ticket_id, "out") if n.kind == "step"]
+    owned: list[str] = []
+    decisions: list[str] = []
+    for s in steps:
+        for nb in neighbors(db, project_id, s.id, "out"):
+            if nb.kind == "code_region":
+                owned.append(nb.label)
+            elif nb.kind == "decision":
+                decisions.append(nb.label)
+    owned = sorted(dict.fromkeys(owned))
+    decisions = list(dict.fromkeys(decisions))
     parts = [
         "# Task\nYou are an autonomous coding agent working in the current git repository. "
         "Implement ONLY the step below by creating and editing the necessary files NOW. Make "

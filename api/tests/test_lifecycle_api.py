@@ -95,3 +95,21 @@ def test_state_endpoint_reports_progress(repo):
     r = c.get(f"/projects/{PID}/tickets/{tid}/state")
     assert r.status_code == 200
     assert r.json()["awaiting"]["type"] == "plan_approval"
+
+
+def test_start_plan_is_idempotent_and_never_resets_a_started_graph(repo):
+    c = _client()
+    tid = f"{PID}-t3"
+    # calling /plan twice returns the same pending plan, no duplicate steps
+    a = c.post(f"/projects/{PID}/tickets/{tid}/plan", json={"title": "세번째"}).json()
+    b = c.post(f"/projects/{PID}/tickets/{tid}/plan", json={"title": "세번째"}).json()
+    assert b["awaiting"]["type"] == "plan_approval"
+    assert a["awaiting"]["steps"] == b["awaiting"]["steps"]
+
+    # approve, then call /plan again: it must NOT reset the graph back to planning
+    c.post(f"/projects/{PID}/tickets/{tid}/plan/approve", json={"steps": a["awaiting"]["steps"]})
+    again = c.post(f"/projects/{PID}/tickets/{tid}/plan", json={"title": "세번째"}).json()
+    assert again["awaiting"]["type"] == "review"  # still executing, not re-proposed
+    db = SessionLocal()
+    assert db.get(Node, f"{tid}-s1").status == "awaiting_review"
+    db.close()

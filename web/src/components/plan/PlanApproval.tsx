@@ -72,10 +72,17 @@ export function PlanApproval({
     });
   const add = () => setSteps((s) => [...s, { label: '새 step', intent: '', acceptance: '' }]);
 
+  const [error, setError] = useState<string | null>(null);
   const approve = async () => {
     setBusy(true);
-    await api.approvePlan({ ticketId: planTid ?? ticketId ?? 't-new', steps, title });
-    onApproved();
+    setError(null);
+    try {
+      await api.approvePlan({ ticketId: planTid ?? ticketId ?? 't-new', steps, title });
+      onApproved();
+    } catch {
+      setError('승인에 실패했습니다. 다시 시도해 주세요.');
+      setBusy(false); // re-enable so the user can retry
+    }
   };
 
   if (!ready) {
@@ -136,7 +143,9 @@ export function PlanApproval({
       </button>
 
       <footer className="plan__foot">
-        <span className="plan__note">순서·내용은 언제든 편집 가능합니다.</span>
+        <span className="plan__note">
+          {error ? <span className="plan__error" role="alert">{error}</span> : '순서·내용은 언제든 편집 가능합니다.'}
+        </span>
         <div className="plan__actions">
           {onCancel && (
             <button className="btn btn--ghost" onClick={onCancel}>
