@@ -82,6 +82,7 @@ export interface ProjectMapProps {
 function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
   const graph = useStore((s) => s.graph);
   const selectTicket = useStore((s) => s.selectTicket);
+  const editPlan = useStore((s) => s.editPlan);
   const [showCode, setShowCode] = useState(false);
 
   const active = !!highlightIds && highlightIds.length > 0;
@@ -250,7 +251,10 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
       nodesDraggable={false}
       nodesConnectable={false}
       onNodeClick={(_, node) => {
-        if (node.type === 'ticket') selectTicket(node.id);
+        if (node.type !== 'ticket' || !graph) return;
+        // a planning ticket opens its plan editor; others open the cockpit
+        if (ticketDisplayStatus(graph, node.id) === 'planning') editPlan(node.id);
+        else selectTicket(node.id);
       }}
       panOnDrag={false}
       zoomOnDoubleClick={false}

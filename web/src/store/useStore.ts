@@ -12,11 +12,14 @@ interface State {
   selectedTicketId: string | null;
   selectedStepId: string | null;
   reviewOpen: boolean; // full-screen review gate overlay
+  planTicketId: string | null; // ticket whose plan is being edited (planning tickets)
   load: () => Promise<void>;
   selectTicket: (id: string | null) => void;
   selectStep: (id: string | null) => void;
   openReview: () => void;
   closeReview: () => void;
+  editPlan: (ticketId: string) => void;
+  closePlan: () => void;
 }
 
 /** When a ticket opens, focus the step that needs you — the one awaiting review,
@@ -42,6 +45,7 @@ export const useStore = create<State>((set, get) => {
     selectedTicketId: null,
     selectedStepId: null,
     reviewOpen: false,
+    planTicketId: null,
     load: async () => set({ graph: await api.getGraph() }),
     selectTicket: (id) =>
       set((s) => ({
@@ -52,5 +56,7 @@ export const useStore = create<State>((set, get) => {
     selectStep: (id) => set({ selectedStepId: id }),
     openReview: () => set({ reviewOpen: true }),
     closeReview: () => set({ reviewOpen: false }),
+    editPlan: (ticketId) => set({ planTicketId: ticketId }),
+    closePlan: () => set({ planTicketId: null }),
   };
 });

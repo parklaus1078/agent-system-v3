@@ -1,39 +1,58 @@
 import { useEffect, useState } from 'react';
 import { useStore } from '../../store/useStore';
+import { neighbors } from '../../domain/graph';
 import type { PlanProposal } from '../../api/dto';
 import { LayersIcon, CheckIcon, PlusIcon, XIcon, ChevronUpIcon, ChevronDownIcon } from '../icons';
 import './PlanApproval.css';
 
 type Step = PlanProposal['steps'][number];
 
-/** Edit + approve the planner's proposed steps. Approving starts execution
- *  (each step then stops at its own review gate). */
+/** Edit + approve a ticket's steps. Two modes:
+ *  - `goal`: ask the planner to propose steps for a new goal.
+ *  - `ticketId`: edit an existing (planning) ticket's proposed steps.
+ *  Approving starts execution (each step then stops at its own review gate). */
 export function PlanApproval({
   goal,
+  ticketId,
   onApproved,
   onCancel,
 }: {
-  goal: string;
+  goal?: string;
+  ticketId?: string;
   onApproved: () => void;
   onCancel?: () => void;
 }) {
   const api = useStore((s) => s.api);
-  const [proposal, setProposal] = useState<PlanProposal | null>(null);
+  const graph = useStore((s) => s.graph);
   const [steps, setSteps] = useState<Step[]>([]);
+  const [ready, setReady] = useState(false);
+  const [title, setTitle] = useState('');
+  const [tag, setTag] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     let alive = true;
-    void api.proposePlan(goal).then((p) => {
-      if (alive) {
-        setProposal(p);
-        setSteps(p.steps);
-      }
-    });
+    if (ticketId) {
+      const ticket = graph?.nodes.find((n) => n.id === ticketId);
+      const tkSteps = graph ? neighbors(graph, ticketId, 'out').filter((n) => n.kind === 'step') : [];
+      setTitle(ticket?.label ?? '');
+      setTag((ticket?.data?.tag as string) ?? null);
+      setSteps(tkSteps.map((s) => ({ label: s.label, intent: '', acceptance: '' })));
+      setReady(true);
+    } else if (goal) {
+      setTitle(goal);
+      setTag(null);
+      void api.proposePlan(goal).then((p) => {
+        if (alive) {
+          setSteps(p.steps);
+          setReady(true);
+        }
+      });
+    }
     return () => {
       alive = false;
     };
-  }, [api, goal]);
+  }, [api, graph, goal, ticketId]);
 
   const setLabel = (i: number, label: string) =>
     setSteps((s) => s.map((st, j) => (j === i ? { ...st, label } : st)));
@@ -49,13 +68,12 @@ export function PlanApproval({
   const add = () => setSteps((s) => [...s, { label: '새 step', intent: '', acceptance: '' }]);
 
   const approve = async () => {
-    if (!proposal) return;
     setBusy(true);
-    await api.approvePlan({ ...proposal, steps });
+    await api.approvePlan({ ticketId: ticketId ?? 't-new', steps });
     onApproved();
   };
 
-  if (!proposal) {
+  if (!ready) {
     return <div className="plan plan--loading">플랜을 생성하는 중…</div>;
   }
 
@@ -63,8 +81,8 @@ export function PlanApproval({
     <div className="plan">
       <header className="plan__head">
         <div className="plan__title">
-          <LayersIcon size={16} />
-          <span className="plan__goal">{goal}</span>
+          {tag ? <span className="plan__tag kindtag">{tag}</span> : <LayersIcon size={16} />}
+          <span className="plan__goal">{title}</span>
         </div>
         {onCancel && (
           <button className="plan__close" aria-label="닫기" onClick={onCancel}>

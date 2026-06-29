@@ -21,6 +21,14 @@
   gap: 9px;
   min-width: 0;
 }
+.plan__tag {
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-size: 10px;
+  flex: none;
+}
 .plan__goal {
   font-size: 15px;
   font-weight: 600;

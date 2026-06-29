@@ -29,6 +29,8 @@ export function Shell({ onHome }: { onHome?: () => void }) {
   const selectedTicketId = useStore((s) => s.selectedTicketId);
   const selectedStepId = useStore((s) => s.selectedStepId);
   const reviewOpen = useStore((s) => s.reviewOpen);
+  const planTicketId = useStore((s) => s.planTicketId);
+  const closePlan = useStore((s) => s.closePlan);
   const selectTicket = useStore((s) => s.selectTicket);
   const clock = useElapsedClock();
   const loaded = useRef(false);
@@ -153,6 +155,11 @@ export function Shell({ onHome }: { onHome?: () => void }) {
               onCancel={() => setGoalFlow('none')}
               onApproved={() => setGoalFlow('none')}
             />
+          </Modal>
+        )}
+        {planTicketId && (
+          <Modal onClose={closePlan}>
+            <PlanApproval ticketId={planTicketId} onCancel={closePlan} onApproved={closePlan} />
           </Modal>
         )}
       </main>

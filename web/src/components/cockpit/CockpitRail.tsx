@@ -15,6 +15,7 @@ export function CockpitRail() {
   const graph = useStore((s) => s.graph);
   const selectedTicketId = useStore((s) => s.selectedTicketId);
   const selectTicket = useStore((s) => s.selectTicket);
+  const editPlan = useStore((s) => s.editPlan);
   if (!graph) return null;
 
   const objective = graph.nodes.find((n) => n.kind === 'objective');
@@ -53,7 +54,7 @@ export function CockpitRail() {
               key={t.id}
               type="button"
               className={`rail-ticket${active ? ' is-active' : ''}`}
-              onClick={() => selectTicket(t.id)}
+              onClick={() => (status === 'planning' ? editPlan(t.id) : selectTicket(t.id))}
             >
               <span className="rail-ticket__top">
                 <span className={`rail-ticket__dot rf-dot--${status}`} aria-hidden="true" />
