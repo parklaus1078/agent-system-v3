@@ -538,74 +538,58 @@
   color: var(--ink);
 }
 
-/* status-specific state panels (done / waiting / running / blocked) */
-.rsum__state {
+/* status note — plain status-colored box (done / waiting / running / blocked),
+   matching the wireframe's per-step review states */
+.rsum__note {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 14px 15px;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 12px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 9px;
   background: var(--surface-2);
+  font-size: 11.5px;
+  line-height: 1.5;
 }
-.rsum__state-icon {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+.rsum__note svg {
   flex: none;
-  background: var(--surface-3);
-  color: var(--muted);
 }
-.rsum__state-text {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-}
-.rsum__state-title {
-  font-size: 14px;
-  font-weight: 600;
-}
-.rsum__state-sub {
-  font-size: 12.5px;
-  line-height: 1.4;
-  color: var(--muted);
-}
-.rsum__state--done {
-  border-color: var(--done-bd);
+.rsum__note--done {
   background: var(--done-bg);
-}
-.rsum__state--done .rsum__state-icon {
-  background: var(--done);
-  color: #fff;
-}
-.rsum__state--done .rsum__state-title {
+  border-color: var(--done-bd);
   color: var(--done-fg);
 }
-.rsum__state--wait .rsum__state-title {
-  color: var(--ink-2);
+.rsum__note--wait {
+  background: #f7f8fa;
+  border-color: #eef0f3;
+  color: #8b929c;
 }
-.rsum__state--run {
-  border-color: var(--exec-bd);
+.rsum__note--run {
   background: var(--exec-bg);
-}
-.rsum__state--run .rsum__state-icon {
-  background: var(--executing);
-  color: #fff;
-}
-.rsum__state--run .rsum__state-title {
+  border-color: var(--exec-bd);
   color: var(--exec-fg);
 }
-.rsum__state--blocked {
-  border-color: var(--blocked-bd);
+.rsum__note--blocked {
   background: var(--blocked-bg);
-}
-.rsum__state--blocked .rsum__state-icon {
-  background: var(--blocked);
-  color: #fff;
-}
-.rsum__state--blocked .rsum__state-title {
+  border-color: var(--blocked-bd);
   color: var(--blocked-fg);
+}
+.rsum__trace {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  height: 36px;
+  margin-top: 9px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.rsum__trace:hover {
+  border-color: var(--border-strong);
+  color: var(--ink);
 }

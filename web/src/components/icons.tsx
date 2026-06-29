@@ -89,3 +89,9 @@ export const AlertIcon = svg(
     <path d="M12 17h.01" />
   </>,
 );
+export const NoEntryIcon = svg(
+  <>
+    <circle cx="12" cy="12" r="8.5" />
+    <path d="m6.4 6.4 11.2 11.2" />
+  </>,
+);
