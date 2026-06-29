@@ -75,3 +75,17 @@ export const EditIcon = svg(
     <path d="m13.5 6.5 4 4" />
   </>,
 );
+export const ClockIcon = svg(
+  <>
+    <circle cx="12" cy="12" r="8.5" />
+    <path d="M12 7.5V12l3 2" />
+  </>,
+);
+export const PlayIcon = svg(<path d="M8 5.5v13l10-6.5-10-6.5Z" />);
+export const AlertIcon = svg(
+  <>
+    <path d="M12 3.5 21 19H3L12 3.5Z" />
+    <path d="M12 10v4" />
+    <path d="M12 17h.01" />
+  </>,
+);

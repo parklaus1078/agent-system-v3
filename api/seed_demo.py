@@ -20,11 +20,18 @@ NODES = [
     },
     {"id": "t-crud", "kind": "ticket", "label": "할일 CRUD", "status": "done", "data": {"tag": "CRUD"}},
     {"id": "t-gate", "kind": "ticket", "label": "구독 티어 + 기능 게이팅", "status": "executing", "data": {"tag": "GATE"}},
+    {"id": "t-pay", "kind": "ticket", "label": "페이월 & 업셀", "status": "planning", "data": {"tag": "PAY"}},
+    {"id": "t-sync", "kind": "ticket", "label": "오프라인 동기화", "status": "blocked", "data": {"tag": "SYNC"}},
     {"id": "s1", "kind": "step", "label": "할일 모델 + 저장", "status": "done"},
     {"id": "s2", "kind": "step", "label": "할일 추가 폼", "status": "done"},
     {"id": "s3", "kind": "step", "label": "티어 플래그 정의", "status": "done"},
     {"id": "s4", "kind": "step", "label": "게이트 컴포넌트", "status": "awaiting_review"},
     {"id": "s5", "kind": "step", "label": "업그레이드 안내 UI", "status": "planning"},
+    {"id": "sp1", "kind": "step", "label": "페이월 화면 골격", "status": "planning"},
+    {"id": "sp2", "kind": "step", "label": "업셀 카피", "status": "planning"},
+    {"id": "sy1", "kind": "step", "label": "동기화 큐", "status": "done"},
+    {"id": "sy2", "kind": "step", "label": "충돌 해결", "status": "blocked"},
+    {"id": "sy3", "kind": "step", "label": "재시도 로직", "status": "planning"},
     {"id": "dec", "kind": "decision", "label": "게이팅은 플래그로 (티어 분기 금지)"},
 ]
 EDGES = [
@@ -36,12 +43,20 @@ EDGES = [
     {"id": "e6", "from": "t-gate", "to": "s4", "kind": "has"},
     {"id": "e7", "from": "t-gate", "to": "s5", "kind": "has"},
     {"id": "e8", "from": "s4", "to": "dec", "kind": "decided"},
+    {"id": "e15", "from": "obj", "to": "t-pay", "kind": "has"},
+    {"id": "e16", "from": "obj", "to": "t-sync", "kind": "has"},
+    {"id": "e17", "from": "t-pay", "to": "sp1", "kind": "has"},
+    {"id": "e18", "from": "t-pay", "to": "sp2", "kind": "has"},
+    {"id": "e19", "from": "t-sync", "to": "sy1", "kind": "has"},
+    {"id": "e20", "from": "t-sync", "to": "sy2", "kind": "has"},
+    {"id": "e21", "from": "t-sync", "to": "sy3", "kind": "has"},
 ]
 TOUCHES = [
     ("s1", "src/todo/model.ts"),
     ("s2", "src/todo/TodoForm.tsx"),
     ("s3", "src/billing/flags.ts"),
     ("s4", "src/billing/FeatureGate.tsx"),
+    ("sy1", "src/sync/queue.ts"),
 ]
 
 

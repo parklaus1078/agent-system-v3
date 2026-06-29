@@ -537,3 +537,75 @@
   border-color: var(--border-strong);
   color: var(--ink);
 }
+
+/* status-specific state panels (done / waiting / running / blocked) */
+.rsum__state {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 15px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+.rsum__state-icon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  flex: none;
+  background: var(--surface-3);
+  color: var(--muted);
+}
+.rsum__state-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.rsum__state-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+.rsum__state-sub {
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+.rsum__state--done {
+  border-color: var(--done-bd);
+  background: var(--done-bg);
+}
+.rsum__state--done .rsum__state-icon {
+  background: var(--done);
+  color: #fff;
+}
+.rsum__state--done .rsum__state-title {
+  color: var(--done-fg);
+}
+.rsum__state--wait .rsum__state-title {
+  color: var(--ink-2);
+}
+.rsum__state--run {
+  border-color: var(--exec-bd);
+  background: var(--exec-bg);
+}
+.rsum__state--run .rsum__state-icon {
+  background: var(--executing);
+  color: #fff;
+}
+.rsum__state--run .rsum__state-title {
+  color: var(--exec-fg);
+}
+.rsum__state--blocked {
+  border-color: var(--blocked-bd);
+  background: var(--blocked-bg);
+}
+.rsum__state--blocked .rsum__state-icon {
+  background: var(--blocked);
+  color: #fff;
+}
+.rsum__state--blocked .rsum__state-title {
+  color: var(--blocked-fg);
+}
