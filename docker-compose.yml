@@ -1,0 +1,55 @@
+# Control Tower — full stack: web (nginx SPA + /api proxy) | api (FastAPI) | db (Postgres + pgvector)
+#   docker compose up --build      then open http://localhost:8080
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ct}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ct}
+      POSTGRES_DB: ${POSTGRES_DB:-controltower}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ct} -d ${POSTGRES_DB:-controltower}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  api:
+    build: ./api
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # SQLAlchemy + PGVector want the +psycopg driver form; the checkpointer code
+      # normalizes it to a libpq URI when ASV3_CHECKPOINTER=postgres.
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-ct}:${POSTGRES_PASSWORD:-ct}@db:5432/${POSTGRES_DB:-controltower}
+      # The container has no Claude CLI/auth -> run the lifecycle deterministically.
+      ASV3_AGENT_MODE: ${ASV3_AGENT_MODE:-simulated}
+      # In-process lifecycle checkpointer (robust). Set to "postgres" to persist across restarts.
+      ASV3_CHECKPOINTER: ${ASV3_CHECKPOINTER:-memory}
+      ASV3_TARGET_REPO_DIR: /data/target-repo
+      # Optional: ASV3_EMBEDDINGS=huggingface to use real embeddings + pgvector (heavier image).
+      ASV3_EMBEDDINGS: ${ASV3_EMBEDDINGS:-}
+    volumes:
+      - api-repo:/data
+    ports:
+      - "8000:8000" # direct API access + /docs (the web app reaches it via /api)
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./web
+      args:
+        VITE_API_BASE: /api
+    depends_on:
+      - api
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+
+volumes:
+  db-data:
+  api-repo:
