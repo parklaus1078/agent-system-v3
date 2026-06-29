@@ -196,6 +196,18 @@
   background: #c9790f;
 }
 
+/* blocked card — needs debugging, red emphasis */
+.bcard--blocked {
+  border-color: var(--blocked-bd);
+  box-shadow: 0 0 0 1px var(--blocked-bd), 0 6px 16px rgba(226, 74, 74, 0.12);
+}
+.bcard__review--blocked {
+  background: var(--blocked);
+}
+.bcard__review--blocked:hover {
+  background: #c93b3b;
+}
+
 /* done card — compact single row with a check */
 .bcard--done {
   flex-direction: row;

@@ -39,3 +39,15 @@ test('back-to-map button clears the ticket selection', async () => {
   await userEvent.click(await screen.findByRole('button', { name: /지도/ }));
   expect(useStore.getState().selectedTicketId).toBeNull();
 });
+
+test('a blocked step sits in the AWAITING REVIEW column with a “디버그 추적” action', async () => {
+  // t-sync fixtures: 동기화 큐 (done), 충돌 해결 (blocked), 재시도 로직 (planning)
+  useStore.getState().selectTicket('t-sync');
+  render(<TicketBoard />);
+  const blocked = (await screen.findByText('충돌 해결')).closest('[data-col]');
+  expect(blocked).toHaveAttribute('data-col', 'review'); // needs-attention column, not executing
+  // its CTA is a debug trace (not "리뷰 시작"), and it drills into the cockpit
+  await userEvent.click(screen.getByRole('button', { name: /디버그 추적/ }));
+  expect(useStore.getState().mode).toBe('cockpit');
+  expect(useStore.getState().selectedStepId).toBe('sy2');
+});

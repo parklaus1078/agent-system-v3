@@ -29,11 +29,14 @@ interface State {
 }
 
 /** When a ticket opens, focus the step that needs you — the one awaiting review,
- *  else the first step — so the cockpit review fills in immediately. */
+ *  else the blocked one (so you can debug it), else the first step — so the
+ *  cockpit review fills in immediately. */
 function defaultStepFor(graph: ProjectGraph | null, ticketId: string | null): string | null {
   if (!graph || !ticketId) return null;
   const steps = neighbors(graph, ticketId, 'out').filter((n) => n.kind === 'step');
-  return (steps.find((s) => s.status === 'awaiting_review') ?? steps[0])?.id ?? null;
+  const needsYou =
+    steps.find((s) => s.status === 'awaiting_review') ?? steps.find((s) => s.status === 'blocked');
+  return (needsYou ?? steps[0])?.id ?? null;
 }
 
 export const useStore = create<State>((set, get) => {

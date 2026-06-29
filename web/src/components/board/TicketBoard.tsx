@@ -11,12 +11,13 @@ const STATUS_LABEL: Record<Status, string> = {
   blocked: 'blocked',
 };
 
-/** The four board lanes. A step lands in exactly one by its status (blocked sits in
- *  the active EXECUTING lane — it's the slot that failed and needs you). */
+/** The four board lanes. A step lands in exactly one by its status. blocked joins
+ *  AWAITING REVIEW — it's the needs-your-attention lane (you debug it), matching the
+ *  wireframe — not EXECUTING, which is only the step actively running. */
 const COLUMNS: { key: string; title: string; statuses: Status[] }[] = [
   { key: 'planned', title: 'PLANNED', statuses: ['planning'] },
-  { key: 'executing', title: 'EXECUTING', statuses: ['executing', 'blocked'] },
-  { key: 'review', title: 'AWAITING REVIEW', statuses: ['awaiting_review'] },
+  { key: 'executing', title: 'EXECUTING', statuses: ['executing'] },
+  { key: 'review', title: 'AWAITING REVIEW', statuses: ['awaiting_review', 'blocked'] },
   { key: 'done', title: 'DONE', statuses: ['done'] },
 ];
 
@@ -48,20 +49,28 @@ export function TicketBoard() {
   const card = (step: GraphNode) => {
     const status = step.status ?? 'planning';
     const num = numOf.get(step.id) ?? '';
-    if (status === 'awaiting_review') {
+    if (status === 'awaiting_review' || status === 'blocked') {
+      const blocked = status === 'blocked';
       return (
-        <article key={step.id} className="bcard bcard--review" data-col="review">
+        <article
+          key={step.id}
+          className={`bcard ${blocked ? 'bcard--blocked' : 'bcard--review'}`}
+          data-col="review"
+        >
           <div className="bcard__top">
             <span className="bcard__step mono">step {num}</span>
-            <span className="pill pill--awaiting_review">
+            <span className={`pill pill--${status}`}>
               <span className="dot" />
-              awaiting review
+              {STATUS_LABEL[status]}
             </span>
           </div>
           <h3 className="bcard__title">{step.label}</h3>
           <div className="bcard__touch mono">{touches(graph, step.id)}</div>
-          <button className="bcard__review" onClick={() => openInCockpit(step.id)}>
-            리뷰 시작
+          <button
+            className={`bcard__review${blocked ? ' bcard__review--blocked' : ''}`}
+            onClick={() => openInCockpit(step.id)}
+          >
+            {blocked ? '디버그 추적' : '리뷰 시작'}
             <ArrowRightIcon size={14} />
           </button>
         </article>
