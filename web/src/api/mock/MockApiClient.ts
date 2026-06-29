@@ -66,8 +66,38 @@ export class MockApiClient implements ApiClient {
     };
   }
 
-  async approvePlan(_p: PlanProposal): Promise<void> {
+  async approvePlan(p: PlanProposal): Promise<void> {
+    let ticket = this.graph.nodes.find((n) => n.id === p.ticketId);
+    if (!ticket) {
+      // new goal: create the ticket under the objective
+      ticket = { id: p.ticketId, kind: 'ticket', label: p.title ?? p.ticketId, status: 'executing', data: {} };
+      this.graph.nodes.push(ticket);
+      const obj = this.graph.nodes.find((n) => n.kind === 'objective');
+      if (obj) {
+        this.graph.edges.push({ id: `has:${obj.id}:${p.ticketId}`, from: obj.id, to: p.ticketId, kind: 'has' });
+      }
+    }
+    if (p.title) ticket.label = p.title;
+
+    // replace the ticket's step children with the approved (edited) steps
+    const oldIds = new Set(
+      neighbors(this.graph, p.ticketId, 'out')
+        .filter((n) => n.kind === 'step')
+        .map((s) => s.id),
+    );
+    this.graph.nodes = this.graph.nodes.filter((n) => !oldIds.has(n.id));
+    this.graph.edges = this.graph.edges.filter((e) => !oldIds.has(e.from) && !oldIds.has(e.to));
+    p.steps.forEach((s, i) => {
+      const sid = `${p.ticketId}-s${i + 1}`;
+      // step 1 starts executing immediately; the rest stay queued
+      this.graph.nodes.push({ id: sid, kind: 'step', label: s.label, status: i === 0 ? 'executing' : 'planning' });
+      this.graph.edges.push({ id: `has:${sid}`, from: p.ticketId, to: sid, kind: 'has' });
+    });
+
+    ticket.status = 'executing';
     this.notify();
+    // start step 1: the simulated executor finishes it and stops at the review gate
+    if (p.steps.length) this.gateLater(`${p.ticketId}-s1`);
   }
 
   async reviewStep(stepId: string, action: ReviewAction): Promise<void> {
