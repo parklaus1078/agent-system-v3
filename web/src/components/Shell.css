@@ -118,6 +118,9 @@
   gap: 12px;
   flex: none;
 }
+.legend-anchor {
+  position: relative; /* anchors the Legend popover under the button */
+}
 .live {
   display: inline-flex;
   align-items: center;

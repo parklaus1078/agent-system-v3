@@ -8,6 +8,7 @@ import { BugTrace } from './bugtrace/BugTrace';
 import { Modal } from './Modal';
 import { GoalEntry } from './goal/GoalEntry';
 import { PlanApproval } from './plan/PlanApproval';
+import { Legend } from './legend/Legend';
 import { GridIcon } from './icons';
 import './Shell.css';
 
@@ -40,6 +41,7 @@ export function Shell({ onHome }: { onHome?: () => void }) {
   const [highlightIds, setHighlightIds] = useState<string[] | null>(null);
   const [goalFlow, setGoalFlow] = useState<'none' | 'goal' | 'plan'>('none');
   const [pendingGoal, setPendingGoal] = useState('');
+  const [legendOpen, setLegendOpen] = useState(false);
 
   useEffect(() => {
     if (!loaded.current) {
@@ -66,7 +68,11 @@ export function Shell({ onHome }: { onHome?: () => void }) {
     mode === 'cockpit' && selectedTicketId ? 'cockpit' : selectedTicketId ? 'board' : 'map';
 
   const goNavigator = () => setMode('navigator');
-  const goMap = () => selectTicket(null); // breadcrumb: drop the ticket, back to the map
+  const goMap = () => {
+    // breadcrumb / project name: back to the Navigator project map
+    setMode('navigator');
+    selectTicket(null);
+  };
   const goCockpit = () => {
     setMode('cockpit');
     if (selectedTicketId) return;
@@ -110,23 +116,30 @@ export function Shell({ onHome }: { onHome?: () => void }) {
           <div className="segmented" role="group" aria-label="altitude">
             <button
               className="segmented__btn"
-              aria-pressed={mode === 'navigator'}
+              aria-pressed={view !== 'cockpit'} // map & board are both Navigator
               onClick={goNavigator}
             >
               Navigator
             </button>
             <button
               className="segmented__btn"
-              aria-pressed={mode === 'cockpit'}
+              aria-pressed={view === 'cockpit'}
               onClick={goCockpit}
             >
               Cockpit
             </button>
           </div>
-          <button className="iconbtn">
-            <GridIcon size={15} />
-            Legend
-          </button>
+          <div className="legend-anchor">
+            <button
+              className="iconbtn"
+              aria-expanded={legendOpen}
+              onClick={() => setLegendOpen((o) => !o)}
+            >
+              <GridIcon size={15} />
+              Legend
+            </button>
+            {legendOpen && <Legend onClose={() => setLegendOpen(false)} />}
+          </div>
         </div>
       </header>
 
