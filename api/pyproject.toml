@@ -6,10 +6,13 @@ dependencies = [
   "fastapi>=0.115", "uvicorn[standard]>=0.30", "sqlalchemy>=2.0.30",
   "pydantic>=2.8", "unidiff>=0.7.5",
   "langgraph>=0.2", "langgraph-checkpoint-postgres>=2.0", "langchain-anthropic>=0.2",
+  "langchain-core>=0.3", "langchain-text-splitters>=0.3",
 ]
 [project.optional-dependencies]
 dev = ["pytest>=8.3", "httpx>=0.27"]
 postgres = ["psycopg[binary]>=3.2", "pgvector>=0.3"]
+# real-mode RAG (lazy-imported; not needed for tests):
+rag = ["langchain-postgres>=0.0.12", "langchain-huggingface>=0.1"]
 
 [build-system]
 requires = ["setuptools>=68"]
