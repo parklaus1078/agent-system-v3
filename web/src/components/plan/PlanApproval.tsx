@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../../store/useStore';
-import { neighbors } from '../../domain/graph';
 import type { PlanProposal } from '../../api/dto';
 import { LayersIcon, CheckIcon, PlusIcon, XIcon, ChevronUpIcon, ChevronDownIcon } from '../icons';
 import './PlanApproval.css';
@@ -29,6 +28,8 @@ export function PlanApproval({
   const [title, setTitle] = useState('');
   const [tag, setTag] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // The ticket id the planner resolved to (a new goal mints one) — passed to approve.
+  const [planTid, setPlanTid] = useState<string | null>(null);
   // Initialize the editable steps ONCE — not on every live graph reload, which
   // would otherwise wipe the user's in-progress add/remove/reorder edits.
   const initialized = useRef(false);
@@ -42,26 +43,20 @@ export function PlanApproval({
 
   useEffect(() => {
     if (initialized.current) return;
-    if (ticketId) {
-      if (!graph) return; // wait until the graph is loaded, then init once
-      const ticket = graph.nodes.find((n) => n.id === ticketId);
-      const tkSteps = neighbors(graph, ticketId, 'out').filter((n) => n.kind === 'step');
-      setTitle(ticket?.label ?? '');
-      setTag((ticket?.data?.tag as string) ?? null);
-      setSteps(tkSteps.map((s) => ({ label: s.label, intent: '', acceptance: '' })));
+    if (!ticketId && !goal) return;
+    initialized.current = true;
+    // Both modes start the planning lifecycle and surface the editable proposal.
+    const ticket = ticketId ? graph?.nodes.find((n) => n.id === ticketId) : undefined;
+    setTitle(ticket?.label ?? goal ?? '');
+    setTag((ticket?.data?.tag as string) ?? null);
+    const target = ticketId ? { ticketId } : { goal: goal! };
+    void api.proposePlan(target).then((p) => {
+      if (!mounted.current) return;
+      setPlanTid(p.ticketId);
+      if (p.title) setTitle(p.title);
+      setSteps(p.steps);
       setReady(true);
-      initialized.current = true;
-    } else if (goal) {
-      initialized.current = true;
-      setTitle(goal);
-      setTag(null);
-      void api.proposePlan(goal).then((p) => {
-        if (mounted.current) {
-          setSteps(p.steps);
-          setReady(true);
-        }
-      });
-    }
+    });
   }, [api, graph, goal, ticketId]);
 
   const setLabel = (i: number, label: string) =>
@@ -79,7 +74,7 @@ export function PlanApproval({
 
   const approve = async () => {
     setBusy(true);
-    await api.approvePlan({ ticketId: ticketId ?? 't-new', steps, title });
+    await api.approvePlan({ ticketId: planTid ?? ticketId ?? 't-new', steps, title });
     onApproved();
   };
 

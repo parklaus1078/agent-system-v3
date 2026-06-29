@@ -36,9 +36,28 @@ export class MockApiClient implements ApiClient {
     };
   }
 
-  async proposePlan(goal: string): Promise<PlanProposal> {
+  async proposePlan(target: { goal: string } | { ticketId: string }): Promise<PlanProposal> {
+    if ('ticketId' in target) {
+      const ticket = this.graph.nodes.find((n) => n.id === target.ticketId);
+      const existing = neighbors(this.graph, target.ticketId, 'out')
+        .filter((n) => n.kind === 'step')
+        .map((s) => ({ label: s.label, intent: '', acceptance: '' }));
+      return {
+        ticketId: target.ticketId,
+        title: ticket?.label,
+        steps: existing.length
+          ? existing
+          : [
+              { label: '스펙·골격', intent: '스펙 정리', acceptance: '스펙 합의' },
+              { label: '구현', intent: '핵심 구현', acceptance: '동작' },
+              { label: '테스트', intent: '테스트 추가', acceptance: '그린' },
+            ],
+      };
+    }
+    const goal = target.goal;
     return {
       ticketId: 't-new',
+      title: goal,
       steps: [
         { label: '스펙·골격', intent: `${goal} 스펙 정리`, acceptance: '스펙 합의' },
         { label: '구현', intent: '핵심 구현', acceptance: '동작' },

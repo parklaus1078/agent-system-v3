@@ -6,7 +6,10 @@ import type { StepDetail, ReviewAction, PlanProposal } from './dto';
 export interface ApiClient {
   getGraph(): Promise<ProjectGraph>;
   getStepDetail(stepId: string): Promise<StepDetail>;
-  proposePlan(goal: string): Promise<PlanProposal>;
+  /** Start the planning lifecycle and return the proposed (editable) steps —
+   *  for a brand-new goal, or to (re)plan an existing planning ticket. The
+   *  returned `ticketId` is the one to pass back to approvePlan. */
+  proposePlan(target: { goal: string } | { ticketId: string }): Promise<PlanProposal>;
   approvePlan(proposal: PlanProposal): Promise<void>;
   reviewStep(stepId: string, action: ReviewAction): Promise<void>;
   owningPath(nodeId: string): Promise<string[]>; // node ids from CodeRegion up to Objective

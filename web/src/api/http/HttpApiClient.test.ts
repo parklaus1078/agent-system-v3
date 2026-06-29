@@ -24,6 +24,45 @@ test('owningPath unwraps the {path} envelope', async () => {
   expect(await api.owningPath('cr:x')).toEqual(['cr:x', 's1', 't1', 'obj']);
 });
 
+test('proposePlan(goal) mints a ticket and POSTs to the lifecycle plan endpoint', async () => {
+  const fetchMock = vi.fn(
+    async () =>
+      new Response(
+        JSON.stringify({
+          ticketId: 't-x',
+          next: ['approve'],
+          done: false,
+          current: 0,
+          steps: [],
+          awaiting: { type: 'plan_approval', steps: [{ label: 'a', intent: 'i', acceptance: 'x' }] },
+        }),
+      ),
+  );
+  vi.stubGlobal('fetch', fetchMock);
+  const api = new HttpApiClient('http://api', 'p1');
+  const p = await api.proposePlan({ goal: '구독 결제' });
+  expect(fetchMock).toHaveBeenCalledWith(
+    expect.stringMatching(/^http:\/\/api\/projects\/p1\/tickets\/t-.+\/plan$/),
+    expect.objectContaining({ method: 'POST', body: JSON.stringify({ title: '구독 결제' }) }),
+  );
+  expect(p.ticketId).toMatch(/^t-/); // minted id is threaded back to approve
+  expect(p.steps).toEqual([{ label: 'a', intent: 'i', acceptance: 'x' }]);
+});
+
+test('approvePlan POSTs the edited steps to the ticket approve endpoint', async () => {
+  const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ticketId: 't-x', next: ['review'] })));
+  vi.stubGlobal('fetch', fetchMock);
+  const api = new HttpApiClient('http://api', 'p1');
+  await api.approvePlan({ ticketId: 't-x', steps: [{ label: 'a', intent: '', acceptance: '' }] });
+  expect(fetchMock).toHaveBeenCalledWith(
+    'http://api/projects/p1/tickets/t-x/plan/approve',
+    expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ steps: [{ label: 'a', intent: '', acceptance: '' }] }),
+    }),
+  );
+});
+
 test('reviewStep POSTs the action and notifies subscribers', async () => {
   const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true, status: 'done' })));
   vi.stubGlobal('fetch', fetchMock);

@@ -29,7 +29,7 @@ def build_step_prompt(
         "Keep changes scoped to this step. When the edits are done, stop.",
         f"# Objective (pinned)\n{_objective(db, project_id)}",
         f"# Ticket\n{ticket.label if ticket else ticket_id}",
-        f"# Step\n{step.intent}\nAcceptance: {step.acceptance}",
+        f"# Step\n{step.label}: {step.intent}".rstrip(": ") + f"\nAcceptance: {step.acceptance}",
         "# Code you own (edit only what this step needs)\n"
         + ("\n".join(f"- {p}" for p in owned) or "- (none yet)"),
         "# Prior decisions\n" + ("\n".join(f"- {d}" for d in decisions) or "- (none)"),
