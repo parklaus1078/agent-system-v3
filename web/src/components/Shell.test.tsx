@@ -3,17 +3,18 @@ import userEvent from '@testing-library/user-event';
 import { Shell } from './Shell';
 import { useStore } from '../store/useStore';
 
-// useStore is a module singleton; clear selection so each test starts at the map altitude.
+// useStore is a module singleton; reset to the map (navigator, no ticket) each test.
 beforeEach(() => {
-  useStore.setState({ selectedTicketId: null, selectedStepId: null });
+  useStore.setState({ mode: 'navigator', selectedTicketId: null, selectedStepId: null });
 });
 
-test('shows objective and switches to lane when a ticket is opened', async () => {
+test('shows objective and opens the ticket board when a ticket is clicked', async () => {
   render(<Shell />);
   await waitFor(() => expect(screen.getByText('구독 티어 할일앱')).toBeInTheDocument());
-  // map shows tickets; opening one switches altitude to the lane
+  // map shows tickets; clicking one drills into its kanban board (Navigator zoom-in)
   await userEvent.click(await screen.findByText('구독 티어 + 기능 게이팅'));
-  expect(await screen.findByTestId('ticket-lane')).toBeInTheDocument();
+  expect(await screen.findByTestId('ticket-board')).toBeInTheDocument();
+  expect(screen.getByText('AWAITING REVIEW')).toBeInTheDocument();
 });
 
 test('does NOT render internal plumbing controls', async () => {

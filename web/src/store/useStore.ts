@@ -5,17 +5,23 @@ import { MockApiClient } from '../api/mock/MockApiClient';
 import { HttpApiClient } from '../api/http/HttpApiClient';
 
 export type Altitude = 'map' | 'lane';
+// The top-bar exploration mode. Navigator = map (no ticket) or the ticket's kanban
+// board (ticket open); Cockpit = the 3-pane review workspace for the open ticket.
+export type Mode = 'navigator' | 'cockpit';
 
 interface State {
   api: ApiClient;
   graph: ProjectGraph | null;
+  mode: Mode;
   selectedTicketId: string | null;
   selectedStepId: string | null;
   reviewOpen: boolean; // full-screen review gate overlay
   planTicketId: string | null; // ticket whose plan is being edited (planning tickets)
   load: () => Promise<void>;
+  setMode: (mode: Mode) => void;
   selectTicket: (id: string | null) => void;
   selectStep: (id: string | null) => void;
+  openInCockpit: (stepId: string) => void; // jump from the board into the step's review
   openReview: () => void;
   closeReview: () => void;
   editPlan: (ticketId: string) => void;
@@ -42,11 +48,13 @@ export const useStore = create<State>((set, get) => {
   return {
     api,
     graph: null,
+    mode: 'navigator',
     selectedTicketId: null,
     selectedStepId: null,
     reviewOpen: false,
     planTicketId: null,
     load: async () => set({ graph: await api.getGraph() }),
+    setMode: (mode) => set({ mode }),
     selectTicket: (id) =>
       set((s) => ({
         selectedTicketId: id,
@@ -54,6 +62,7 @@ export const useStore = create<State>((set, get) => {
         reviewOpen: false,
       })),
     selectStep: (id) => set({ selectedStepId: id }),
+    openInCockpit: (stepId) => set({ selectedStepId: stepId, mode: 'cockpit' }),
     openReview: () => set({ reviewOpen: true }),
     closeReview: () => set({ reviewOpen: false }),
     editPlan: (ticketId) => set({ planTicketId: ticketId }),

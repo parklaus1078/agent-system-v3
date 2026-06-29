@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../store/useStore';
 import { ProjectMap } from './map/ProjectMap';
+import { TicketBoard } from './board/TicketBoard';
 import { Cockpit } from './cockpit/Cockpit';
 import { ReviewPane } from './review/ReviewPane';
 import { BugTrace } from './bugtrace/BugTrace';
@@ -32,6 +33,8 @@ export function Shell({ onHome }: { onHome?: () => void }) {
   const planTicketId = useStore((s) => s.planTicketId);
   const closePlan = useStore((s) => s.closePlan);
   const selectTicket = useStore((s) => s.selectTicket);
+  const mode = useStore((s) => s.mode);
+  const setMode = useStore((s) => s.setMode);
   const clock = useElapsedClock();
   const loaded = useRef(false);
   const [highlightIds, setHighlightIds] = useState<string[] | null>(null);
@@ -58,10 +61,14 @@ export function Shell({ onHome }: { onHome?: () => void }) {
 
   const objective = graph?.nodes.find((n) => n.kind === 'objective');
   const projectName = (objective?.data?.short as string | undefined) ?? objective?.label ?? '';
-  const altitude: 'map' | 'lane' = selectedTicketId ? 'lane' : 'map';
+  // Navigator = map (no ticket) or the ticket's board (ticket open); Cockpit = review workspace.
+  const view: 'map' | 'board' | 'cockpit' =
+    mode === 'cockpit' && selectedTicketId ? 'cockpit' : selectedTicketId ? 'board' : 'map';
 
-  const goNavigator = () => selectTicket(null);
+  const goNavigator = () => setMode('navigator');
+  const goMap = () => selectTicket(null); // breadcrumb: drop the ticket, back to the map
   const goCockpit = () => {
+    setMode('cockpit');
     if (selectedTicketId) return;
     // Cockpit needs a ticket in focus: prefer the one awaiting your review.
     const tickets = graph?.nodes.filter((n) => n.kind === 'ticket') ?? [];
@@ -83,7 +90,7 @@ export function Shell({ onHome }: { onHome?: () => void }) {
           {projectName && (
             <>
               <span className="topbar__sep" aria-hidden="true" />
-              <button className="topbar__project" onClick={goNavigator}>
+              <button className="topbar__project" onClick={goMap}>
                 {projectName}
               </button>
             </>
@@ -103,14 +110,14 @@ export function Shell({ onHome }: { onHome?: () => void }) {
           <div className="segmented" role="group" aria-label="altitude">
             <button
               className="segmented__btn"
-              aria-pressed={altitude === 'map'}
+              aria-pressed={mode === 'navigator'}
               onClick={goNavigator}
             >
               Navigator
             </button>
             <button
               className="segmented__btn"
-              aria-pressed={altitude === 'lane'}
+              aria-pressed={mode === 'cockpit'}
               onClick={goCockpit}
             >
               Cockpit
@@ -124,11 +131,13 @@ export function Shell({ onHome }: { onHome?: () => void }) {
       </header>
 
       <main className="shell__main">
-        {altitude === 'map' ? (
+        {view === 'map' ? (
           <ProjectMap
             highlightIds={highlightIds ?? undefined}
             onNewGoal={() => setGoalFlow('goal')}
           />
+        ) : view === 'board' ? (
+          <TicketBoard />
         ) : (
           <Cockpit />
         )}
