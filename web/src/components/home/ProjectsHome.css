@@ -5,11 +5,14 @@
 }
 .home__bar {
   display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: space-between;
+  width: 100%;
   max-width: 664px;
   margin: 0 auto;
-  padding: 26px 0 0;
+  padding: 60px 0 0;
 }
 .home__brand {
   display: flex;
@@ -69,7 +72,7 @@
 }
 .home__goalinput {
   min-height: 92px;
-  resize: vertical;
+  resize: none;
   padding: 16px 18px;
   border: 0;
   background: transparent;
@@ -157,9 +160,9 @@
 .home__bars {
   display: flex;
   gap: 8px;
-  margin-top: 16px;
+  margin-top: 18px;
 }
-.home__bar {
+.home__bar-seg {
   flex: 1;
   min-width: 0;
   display: flex;

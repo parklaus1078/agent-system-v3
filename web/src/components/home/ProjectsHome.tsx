@@ -53,8 +53,9 @@ export function ProjectsHome({ onOpenProject }: { onOpenProject: () => void }) {
               <span className="home__goalhint">PLAN 에이전트가 step으로 분해 → 승인 후 실행</span>
               <button
                 className="btn btn--primary"
-                disabled={!trimmed}
-                onClick={() => setPlanning(true)}
+                onClick={() => {
+                  if (trimmed) setPlanning(true);
+                }}
               >
                 분해 시작
                 <ArrowRightIcon size={15} />
@@ -87,7 +88,7 @@ export function ProjectsHome({ onOpenProject }: { onOpenProject: () => void }) {
                   const status = ticketDisplayStatus(graph!, t.id);
                   const tag = (t.data?.tag as string) ?? t.label.slice(0, 4).toUpperCase();
                   return (
-                    <div key={t.id} className="home__bar">
+                    <div key={t.id} className="home__bar-seg">
                       <span className={`home__bar-fill is-${status}`} />
                       <span className="home__bar-label kindtag">{tag}</span>
                     </div>
