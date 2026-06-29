@@ -88,15 +88,16 @@ def _build(db: Session, pid: str, tid: str, title: str | None = None):
             node.data = {**(node.data or {}), "summary": summary}
         if decision:
             did = f"dec:{sid}"
-            if db.get(Node, did) is None:
+            existing = db.get(Node, did)
+            if existing is None:
                 db.add(Node(id=did, project_id=pid, kind="decision", label=decision))
                 db.add(
                     Edge(id=f"decided:{sid}", project_id=pid, src=sid, dst=did, kind="decided")
                 )
-                # index the decision text so later steps can recall it via RAG
-                MEMORY.index_text(
-                    decision, {"project_id": pid, "node_id": did, "kind": "decision"}
-                )
+            else:
+                existing.label = decision  # a 'changes' re-run can produce a new decision
+            # ALWAYS index the latest decision so later steps recall it via RAG (even on re-run)
+            MEMORY.index_text(decision, {"project_id": pid, "node_id": did, "kind": "decision"})
         db.commit()
 
     def build_prompt(state, step) -> str:

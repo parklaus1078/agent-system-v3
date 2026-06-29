@@ -32,7 +32,13 @@ def promote_project(db: Session, project_id: str, memory, wiki_root: str | None 
             encoding="utf-8",
         )
         memory.index_text(
-            node.label, {"wiki_path": str(path), "kind": "decision", "project_id": project_id}
+            node.label,
+            {
+                "wiki_path": str(path),
+                "node_id": node.id,
+                "kind": "decision",
+                "project_id": project_id,
+            },
         )
         written.append(str(path))
     return written

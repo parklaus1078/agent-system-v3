@@ -9,9 +9,11 @@ from langchain_core.embeddings import Embeddings
 
 
 class DeterministicEmbeddings(Embeddings):
-    """Offline, hash bag-of-words — for tests and a zero-dep default. Unit-normalized."""
+    """Offline, hash bag-of-words — for tests and a zero-dep default. Unit-normalized.
+    Defaults to 384 dims to match sentence-transformers/all-MiniLM-L6-v2, so a PGVector
+    collection has the same width whichever embedding mode is selected."""
 
-    def __init__(self, dim: int = 256):
+    def __init__(self, dim: int = 384):
         self.dim = dim
 
     def _vec(self, text: str) -> list[float]:

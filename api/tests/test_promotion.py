@@ -20,8 +20,9 @@ def test_promote_writes_wiki_and_indexes(session, tmp_path):
     paths = promote_project(session, "p1", mem, wiki_root=str(tmp_path))
     assert len(paths) == 1 and Path(paths[0]).exists()
     assert "flags" in Path(paths[0]).read_text()
-    # now retrievable across projects via the personal wiki layer
-    assert mem.retrieve("feature flags gating", k=1)[0]["metadata"]["kind"] == "decision"
+    # now retrievable across projects via the personal wiki layer, with consistent metadata
+    meta = mem.retrieve("feature flags gating", k=1)[0]["metadata"]
+    assert meta["kind"] == "decision" and meta["node_id"] == "d1" and meta["wiki_path"]
 
 
 def test_promote_is_idempotent(session, tmp_path):

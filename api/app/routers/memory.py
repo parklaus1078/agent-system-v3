@@ -13,9 +13,10 @@ from ..services.memory import MemoryStore
 
 
 def _make_store(embeddings):
-    """Real mode (Postgres + a real embedding model) backs memory with PGVector so it
-    persists; otherwise None -> in-memory store (demo/tests, no Postgres needed)."""
-    if os.getenv("ASV3_EMBEDDINGS") and DATABASE_URL.startswith("postgres"):
+    """Real mode (real embeddings + Postgres) backs memory with PGVector so it persists;
+    otherwise None -> in-memory store (demo/tests, no Postgres needed). Gated on the SAME
+    condition as make_embeddings (== 'huggingface') so demo embeddings are never persisted."""
+    if os.getenv("ASV3_EMBEDDINGS") == "huggingface" and DATABASE_URL.startswith("postgres"):
         from langchain_postgres import PGVector  # lazy: real-mode only
 
         return PGVector(
@@ -27,9 +28,28 @@ def _make_store(embeddings):
     return None
 
 
-# The single process-wide memory the lifecycle router and the memory API both use.
-_EMB = make_embeddings()
-MEMORY = MemoryStore(_EMB, _make_store(_EMB))
+def _build_memory() -> MemoryStore:
+    emb = make_embeddings()
+    return MemoryStore(emb, _make_store(emb))
+
+
+class _LazyMemory:
+    """The single process-wide memory, built on FIRST use rather than at import — so a
+    real embedding model (HuggingFace) is only downloaded when memory is actually used,
+    not eagerly at module import (which would block app startup)."""
+
+    _inst: MemoryStore | None = None
+
+    def _store(self) -> MemoryStore:
+        if _LazyMemory._inst is None:
+            _LazyMemory._inst = _build_memory()
+        return _LazyMemory._inst
+
+    def __getattr__(self, name):
+        return getattr(self._store(), name)
+
+
+MEMORY = _LazyMemory()
 
 router = APIRouter(tags=["memory"])
 
