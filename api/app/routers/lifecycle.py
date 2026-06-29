@@ -20,6 +20,7 @@ from ..services.executor import CliExecutor, SimulatedExecutor
 from ..services.lifecycle_graph import build_graph
 from ..services.planner import CliPlanner, LangChainPlanner, SimulatedPlanner
 from ..services.prompt_build import build_step_prompt, step_rag_context
+from ..services.promotion import promote_project
 from .memory import MEMORY
 
 router = APIRouter(prefix="/projects/{pid}", tags=["lifecycle"])
@@ -58,6 +59,13 @@ def _objective(db: Session, pid: str) -> Node | None:
     return db.scalars(
         select(Node).where(Node.project_id == pid, Node.kind == "objective")
     ).first()
+
+
+def _all_tickets_done(db: Session, pid: str) -> bool:
+    tickets = db.scalars(
+        select(Node).where(Node.project_id == pid, Node.kind == "ticket")
+    ).all()
+    return bool(tickets) and all(t.status == "done" for t in tickets)
 
 
 def _build(db: Session, pid: str, tid: str, title: str | None = None):
@@ -217,6 +225,12 @@ def review_step(pid: str, sid: str, action: ReviewActionIn, db: Session = Depend
             ticket.status = "awaiting_review"
     # changes: the step re-executes, on_step_committed resets it to awaiting_review
     db.commit()
+
+    # project complete (this approve finished its last ticket) -> distill its Decisions
+    # into the personal ~/llm_wiki + index them for cross-project recall.
+    if action.kind == "approve" and not snap.next and _all_tickets_done(db, pid):
+        promote_project(db, pid, MEMORY)
+
     return _payload(tid, snap)
 
 
