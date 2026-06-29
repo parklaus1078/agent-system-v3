@@ -39,7 +39,7 @@ export function BugTrace({ onHighlight }: { onHighlight: (ids: string[]) => void
         className="trace__input mono"
         type="search"
         aria-label="추적"
-        placeholder="추적: 파일 · 심볼 · UI 요소"
+        placeholder="추적: 파일 · 코드 영역"
         value={q}
         onChange={(e) => {
           setQ(e.target.value);

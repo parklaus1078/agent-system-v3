@@ -24,11 +24,24 @@ function toRows(patch: string): Row[] {
     }));
 }
 
+/** A file reads as "new" only when its patch actually says so (or is pure additions) —
+ *  not unconditionally for the first tab. Empty patches (seed/no-diff) are neither. */
+function isNewFile(patch: string): boolean {
+  if (patch.includes('new file')) return true;
+  const body = patch
+    .split('\n')
+    .filter((l) => !l.startsWith('+++') && !l.startsWith('---') && !l.startsWith('@@'));
+  const changed = body.filter((l) => l.startsWith('+') || l.startsWith('-'));
+  return changed.length > 0 && changed.every((l) => l.startsWith('+'));
+}
+
 export function DiffView({ diff }: { diff: DiffBlob[] }) {
   const [active, setActive] = useState(0);
   if (diff.length === 0) return <div className="diff-empty">변경된 파일이 없습니다.</div>;
   const blob = diff[Math.min(active, diff.length - 1)];
   const rows = toRows(blob.patch);
+  const blobIsNew = isNewFile(blob.patch);
+  const hasPatch = blob.patch.trim().length > 0;
 
   return (
     <div className="diff">
@@ -42,14 +55,18 @@ export function DiffView({ diff }: { diff: DiffBlob[] }) {
             onClick={() => setActive(i)}
           >
             <span className="mono">{basename(b.path)}</span>
-            {i === 0 && <span className="diff__newtag">NEW</span>}
+            {isNewFile(b.patch) && <span className="diff__newtag">NEW</span>}
           </button>
         ))}
       </div>
       <div className="diff__pathbar mono">
         <CodeIcon size={13} />
         {blob.path}
-        <span className="diff__pathnote">· 새 파일</span>
+        {blobIsNew ? (
+          <span className="diff__pathnote">· 새 파일</span>
+        ) : (
+          !hasPatch && <span className="diff__pathnote">· diff 없음</span>
+        )}
       </div>
       <div className="diff__code">
         {rows.map((r, i) => (

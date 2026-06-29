@@ -77,6 +77,7 @@ class PlanStartIn(BaseModel):
 class PlanApproveIn(BaseModel):
     # optional human-edited steps; omit to accept the proposed plan verbatim
     steps: list[PlanStep] | None = None
+    title: str | None = None  # optional edited ticket title (persisted if the ticket is new)
 
 
 class LifecycleStateOut(BaseModel):

@@ -41,14 +41,23 @@ def _cfg(tid: str) -> dict:
     return {"configurable": {"thread_id": f"ticket:{tid}"}}
 
 
-def _ticket_of_step(sid: str) -> str:
-    return re.sub(r"-s\d+$", "", sid)
+def _ticket_of_step(db: Session, pid: str, sid: str) -> str:
+    """The owning ticket of a step. Prefer the real parent via the `has` edge (works for
+    any id, incl. seeded ids like s4/sy2 that don't follow the {tid}-s{n} convention);
+    fall back to the naming convention if the step isn't in the DB."""
+    parent = next(
+        (p for p in store.neighbors(db, pid, sid, "in") if p.kind == "ticket"), None
+    )
+    return parent.id if parent is not None else re.sub(r"-s\d+$", "", sid)
 
 
-def _sim_write(repo_dir: str) -> None:
+def _sim_write(repo_dir: str, tid: str) -> None:
     """Simulated executor edit: add a new file per step so every step yields a real,
-    non-empty commit (which diff_of_commit + apply_step_diff then ingest)."""
-    gen = os.path.join(repo_dir, "generated")
+    non-empty commit (which diff_of_commit + apply_step_diff then ingest). Namespaced by
+    ticket (generated/{tid}/) so distinct tickets produce DISTINCT code-region nodes —
+    otherwise every ticket's step N wrote the same generated/step_N.ts and shared the one
+    global `cr:generated/step_N.ts` node (cross-ticket touches collision)."""
+    gen = os.path.join(repo_dir, "generated", tid)
     os.makedirs(gen, exist_ok=True)
     n = len([f for f in os.listdir(gen) if f.endswith(".ts")]) + 1
     with open(os.path.join(gen, f"step_{n}.ts"), "w", encoding="utf-8") as f:
@@ -66,6 +75,21 @@ def _all_tickets_done(db: Session, pid: str) -> bool:
         select(Node).where(Node.project_id == pid, Node.kind == "ticket")
     ).all()
     return bool(tickets) and all(t.status == "done" for t in tickets)
+
+
+def _existing_steps(db: Session, pid: str, tid: str) -> list[dict]:
+    """A ticket's current step children (ordered by their `has` edge), as proposal dicts.
+    Re-planning seeds the proposal from these so the planner revises the EXISTING plan
+    instead of replacing it with generic steps."""
+    edges = db.scalars(
+        select(Edge).where(Edge.project_id == pid, Edge.src == tid, Edge.kind == "has")
+    ).all()
+    out: list[dict] = []
+    for e in sorted(edges, key=lambda e: e.id):
+        child = db.get(Node, e.dst)
+        if child is not None and child.kind == "step":
+            out.append({"label": child.label, "intent": "", "acceptance": ""})
+    return out
 
 
 def _build(db: Session, pid: str, tid: str, title: str | None = None):
@@ -116,7 +140,7 @@ def _build(db: Session, pid: str, tid: str, title: str | None = None):
         executor = CliExecutor(brain=brain)
     else:
         planner = SimulatedPlanner()
-        executor = SimulatedExecutor(_sim_write)
+        executor = SimulatedExecutor(lambda repo_dir: _sim_write(repo_dir, tid))
 
     return build_graph(
         planner=planner,
@@ -135,10 +159,14 @@ def _awaiting(snap):
 
 def _payload(tid: str, snap) -> dict:
     vals = snap.values or {}
+    # `done` must mean "ran to completion", not "no pending node". A never-planned ticket
+    # has an empty checkpoint (no next), which is NOT done — only report done once the
+    # graph actually started (has state) AND has no next node.
+    started = bool(vals)
     return {
         "ticketId": tid,
         "next": list(snap.next),
-        "done": not snap.next,
+        "done": started and not snap.next,
         "current": vals.get("current"),
         "steps": vals.get("steps", []),
         "awaiting": _awaiting(snap),
@@ -178,6 +206,9 @@ def start_plan(pid: str, tid: str, body: PlanStartIn, db: Session = Depends(get_
             "repo_dir": _repo_dir(),
             "objective": obj.label if obj else "",
             "ticket_title": title,
+            # re-planning an existing ticket seeds the proposal from its current steps so
+            # the plan is revised, not silently replaced with a generic 3-step template.
+            "existing_steps": _existing_steps(db, pid, tid),
             "steps": [],
             "current": 0,
             "decisions": [],
@@ -189,7 +220,7 @@ def start_plan(pid: str, tid: str, body: PlanStartIn, db: Session = Depends(get_
 
 @router.post("/tickets/{tid}/plan/approve", response_model=LifecycleStateOut)
 def approve_plan(pid: str, tid: str, body: PlanApproveIn, db: Session = Depends(get_session)):
-    graph = _build(db, pid, tid)
+    graph = _build(db, pid, tid, title=body.title)
     cfg = _cfg(tid)
     snap = graph.get_state(cfg)
     awaiting = _awaiting(snap)
@@ -202,15 +233,56 @@ def approve_plan(pid: str, tid: str, body: PlanApproveIn, db: Session = Depends(
     return _payload(tid, graph.get_state(cfg))
 
 
+def _ticket_done_if_all_steps_done(db: Session, pid: str, tid: str) -> None:
+    ticket = db.get(Node, tid)
+    if ticket is None:
+        return
+    steps = [n for n in store.neighbors(db, pid, tid, "out") if n.kind == "step"]
+    if steps and all(s.status == "done" for s in steps):
+        ticket.status = "done"
+
+
+def _review_db_direct(db: Session, pid: str, tid: str, sid: str, action: ReviewActionIn) -> None:
+    """Apply a review to a step that has NO live LangGraph interrupt — i.e. seeded demo
+    steps (the seed only populates the DB graph, never a checkpoint) and steps whose graph
+    already ended (e.g. after a takeover). Without this, those gates 409'd and the UI
+    failed silently; here the gate is actionable straight on the DB so the demo and the
+    post-takeover hand-off both work."""
+    node = db.get(Node, sid)
+    ticket = db.get(Node, tid)
+    if action.kind == "approve":
+        if node is not None:
+            node.status = "done"
+        _ticket_done_if_all_steps_done(db, pid, tid)
+    elif action.kind == "takeover":
+        if ticket is not None:
+            ticket.status = "awaiting_review"
+        # leave the step awaiting_review so the human can later mark it done (approve)
+    # changes: no executor to re-run here; the step stays awaiting_review (no-op, no error)
+    db.commit()
+    if action.kind == "approve" and _all_tickets_done(db, pid):
+        promote_project(db, pid, MEMORY)
+
+
 @router.post("/steps/{sid}/review", response_model=LifecycleStateOut)
 def review_step(pid: str, sid: str, action: ReviewActionIn, db: Session = Depends(get_session)):
-    tid = _ticket_of_step(sid)
+    tid = _ticket_of_step(db, pid, sid)
     graph = _build(db, pid, tid)
     cfg = _cfg(tid)
     snap = graph.get_state(cfg)
     awaiting = _awaiting(snap)
     if not (awaiting and awaiting.get("type") == "review"):
-        raise HTTPException(409, "no step awaiting review")
+        # No live interrupt: a seeded step, or a step whose graph already ended (takeover).
+        # Operate directly on the DB if the step is in a reviewable state — else 409.
+        node = db.get(Node, sid)
+        if node is None or node.kind != "step" or node.status not in {
+            "awaiting_review",
+            "blocked",
+        }:
+            raise HTTPException(409, "no step awaiting review")
+        _review_db_direct(db, pid, tid, sid, action)
+        return _payload(tid, graph.get_state(cfg))
+
     graph.invoke(Command(resume={"kind": action.kind, "comment": action.comment}), cfg)
     snap = graph.get_state(cfg)
 
@@ -224,6 +296,8 @@ def review_step(pid: str, sid: str, action: ReviewActionIn, db: Session = Depend
     elif action.kind == "takeover":
         if ticket is not None:
             ticket.status = "awaiting_review"
+        # leave the step awaiting_review so a later approve (now via the DB-direct path,
+        # since the graph has ended) can complete it — no dead end after takeover.
     # changes: the step re-executes, on_step_committed resets it to awaiting_review
     db.commit()
 

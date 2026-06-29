@@ -36,6 +36,9 @@ export function Shell({ onHome }: { onHome?: () => void }) {
   const selectTicket = useStore((s) => s.selectTicket);
   const mode = useStore((s) => s.mode);
   const setMode = useStore((s) => s.setMode);
+  const online = useStore((s) => s.online);
+  const error = useStore((s) => s.error);
+  const setError = useStore((s) => s.setError);
   const clock = useElapsedClock();
   const loaded = useRef(false);
   const [highlightIds, setHighlightIds] = useState<string[] | null>(null);
@@ -108,9 +111,9 @@ export function Shell({ onHome }: { onHome?: () => void }) {
         </div>
 
         <div className="topbar__right">
-          <span className="live">
+          <span className={`live${online ? '' : ' live--off'}`} title={online ? '백엔드 연결됨' : '백엔드 연결 끊김'}>
             <span className="live__dot" aria-hidden="true" />
-            <span className="mono">live</span>
+            <span className="mono">{online ? 'live' : 'offline'}</span>
             <span className="live__clock mono">{clock}</span>
           </span>
           <div className="segmented" role="group" aria-label="altitude">
@@ -183,6 +186,14 @@ export function Shell({ onHome }: { onHome?: () => void }) {
           <Modal onClose={closePlan}>
             <PlanApproval ticketId={planTicketId} onCancel={closePlan} onApproved={closePlan} />
           </Modal>
+        )}
+        {error && (
+          <div className="toast" role="alert">
+            <span>{error}</span>
+            <button className="toast__close" aria-label="닫기" onClick={() => setError(null)}>
+              ✕
+            </button>
+          </div>
         )}
       </main>
     </div>

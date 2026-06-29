@@ -147,7 +147,7 @@ sequenceDiagram
 
 ### B4 — Projects home ⇄ a project
 <a id="b4"></a>
-**Trigger:** click the "Control Tower" brand to see the projects list; click a project card to open it; "+ 목표·티켓" starts a new goal.
+**Trigger:** click the "Control Tower" brand to see the projects list; click a project card to open it; the "새 목표" textarea + "분해 시작" on the home (or the map's "목표 · 티켓" button) starts a new goal.
 
 ```mermaid
 sequenceDiagram
@@ -161,7 +161,7 @@ sequenceDiagram
         User->>Home: click project card
         Home-->>UI: render Shell (ProjectMap)
     else start new goal
-        User->>Home: click "+ 목표·티켓" / enter goal
+        User->>Home: type goal in "새 목표" → click "분해 시작"
         Note over Home: GoalEntry → PlanApproval (see C1)
     end
 ```
@@ -206,7 +206,9 @@ sequenceDiagram
     UI->>Store: toggle code-region layer
     Store-->>UI: show/hide code_region nodes + touches edges on the map
 ```
-> CodeRegion-layer toggle is **partial/spec** — present in the wireframe; map wiring is minimal in the app.
+> CodeRegion-layer toggle is **implemented**: it shows/hides all code_region nodes + their `touches`
+> edges on the map (aria-pressed reflects state), and a bug trace (B5) onto a code_region/test node
+> auto-reveals the layer.
 
 ---
 
@@ -214,7 +216,7 @@ sequenceDiagram
 
 ### C1 — New goal → propose → edit → approve → execute
 <a id="c1"></a>
-**Trigger:** "+ 목표·티켓" → type a goal. The planner proposes steps (Claude in real mode); the user edits and approves; the lifecycle runs the first step and stops at its review gate.
+**Trigger:** the map's "목표 · 티켓" button → type a goal. The planner proposes steps (Claude in real mode); the user edits and approves; the lifecycle runs the first step and stops at its review gate.
 
 ```mermaid
 sequenceDiagram
@@ -358,7 +360,7 @@ sequenceDiagram
 
 ### D3 — Review → request changes (re-run)
 <a id="d3"></a>
-**Trigger:** "수정 요청" (with a comment) in the full review pane. The same step re-executes against the feedback.
+**Trigger:** "수정요청" (toggles a comment box) → "변경 요청 보내기" in the full review pane. The same step re-executes against the feedback. (Keyboard: `r`.)
 
 ```mermaid
 sequenceDiagram
@@ -370,7 +372,7 @@ sequenceDiagram
     participant LLM
     participant DB
     participant Mem
-    User->>Pane: "수정 요청" + comment
+    User->>Pane: "수정요청" + comment → "변경 요청 보내기"
     Pane->>Api: reviewStep(stepId, { kind:'changes', comment })
     Api->>Server: POST /steps/{sid}/review { kind:'changes', comment }
     Server->>Graph: invoke(Command(resume={ kind:'changes' }))
@@ -384,7 +386,7 @@ sequenceDiagram
 
 ### D4 — Review → takeover
 <a id="d4"></a>
-**Trigger:** "직접 처리"/"인수" — the human takes the step over; the graph stops automating it.
+**Trigger:** "내가 인수" (full review pane; keyboard `t`) — the human takes the step over; the graph stops automating it. The taken-over step can then be completed via a follow-up "승인" (DB-direct).
 
 ```mermaid
 sequenceDiagram
@@ -394,7 +396,7 @@ sequenceDiagram
     participant Server
     participant Graph
     participant DB
-    User->>Pane: "인수 (takeover)"
+    User->>Pane: "내가 인수" (takeover)
     Pane->>Api: reviewStep(stepId, { kind:'takeover' })
     Api->>Server: POST /steps/{sid}/review { kind:'takeover' }
     Server->>Graph: invoke(Command(resume={ kind:'takeover' }))
@@ -402,7 +404,9 @@ sequenceDiagram
     Server->>DB: ticket → awaiting_review (human-driven)
     Server-->>Pane: state
 ```
-> **Partial** — backend routing is complete; the front-end takeover affordance is minimal vs the spec.
+> The takeover affordance lives only in the full ReviewPane ("내가 인수", not the compact summary).
+> After takeover the graph ends and the ticket → `awaiting_review`; the human then completes the step
+> with a follow-up "승인", which routes through the DB-direct review path (no longer a dead end).
 
 ### D5 — Full review pane (전체 리뷰)
 <a id="d5"></a>
@@ -565,9 +569,12 @@ sequenceDiagram
 
 - **Display-only states** (session clock, "live" indicator, ticket display-status / step-index label
   computation, empty/error states) are derived UI, not interaction flows — folded into the diagrams above.
-- **Status legend:** all flows are **implemented** except — *CodeRegion-layer toggle* (partial: spec/wireframe,
-  minimal map wiring), *Takeover front-end affordance* (partial; backend complete), *Memory search/reindex UI*
-  (API exists, no UI control), and *review-gate keyboard shortcuts a/r/t* (spec/wireframe only).
+- **Status legend:** all flows are **implemented**. The *CodeRegion-layer toggle*, *review-gate keyboard
+  shortcuts a/r/t*, and the *takeover hand-off* (a taken-over step can now be completed via a follow-up
+  approve through the DB-direct review path) were completed in the 2026-06-29 defect-fix pass
+  (see [`defects.md`](defects.md) / [`user-flows-e2e-findings.md`](user-flows-e2e-findings.md)). The
+  *Takeover front-end affordance* still lives only in the full ReviewPane (not the compact summary), and
+  *Memory search/reindex* remain API-only (no UI control).
 - **Mock vs real:** every write flow (C/D/E) runs against the real backend with `VITE_API_BASE`; the
   `MockApiClient` faithfully simulates the same state transitions in-browser (with a 900 ms execution gate)
   so the UI demos the full lifecycle without a server.

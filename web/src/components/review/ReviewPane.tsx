@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useStore } from '../../store/useStore';
 import type { Status } from '../../domain/graph';
 import { DiffView } from './DiffView';
@@ -35,9 +35,28 @@ export function ReviewPane() {
   const selectedStepId = useStore((s) => s.selectedStepId);
   const api = useStore((s) => s.api);
   const closeReview = useStore((s) => s.closeReview);
+  const setError = useStore((s) => s.setError);
   const detail = useStepDetail(selectedStepId);
   const [commenting, setCommenting] = useState(false);
   const [comment, setComment] = useState('');
+
+  // Review-gate keyboard shortcuts (a = 승인, r = 수정요청 토글, t = 인수); ignored while
+  // typing in an input/textarea. Declared before the early return so the hook order is
+  // stable across renders.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const k = e.key.toLowerCase();
+      if (k === 'a') void act({ kind: 'approve' });
+      else if (k === 't') void act({ kind: 'takeover' });
+      else if (k === 'r') setCommenting((v) => !v);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedStepId]);
 
   if (!selectedStepId || !detail) {
     return (
@@ -70,8 +89,13 @@ export function ReviewPane() {
   const acceptanceMet = detail.acceptance.filter((a) => a.met).length;
 
   async function act(action: Parameters<typeof api.reviewStep>[1]) {
-    await api.reviewStep(selectedStepId!, action);
-    closeReview();
+    try {
+      await api.reviewStep(selectedStepId!, action);
+      closeReview();
+    } catch (e) {
+      // Don't close on failure, and don't fail silently — surface it.
+      setError(`리뷰 적용에 실패했습니다: ${e instanceof Error ? e.message : '알 수 없는 오류'}`);
+    }
   }
 
   return (
@@ -170,7 +194,11 @@ export function ReviewPane() {
             <div className="rev-card__head">
               <FlaskIcon size={14} />
               <span>Tests</span>
-              <span className="rev-card__count rev-card__count--ok">● green</span>
+              {testNodes.length > 0 ? (
+                <span className="rev-card__count rev-card__count--ok">● green</span>
+              ) : (
+                <span className="rev-card__count">테스트 없음</span>
+              )}
             </div>
             <ul className="rev-tests">
               {testNodes.length > 0 ? (

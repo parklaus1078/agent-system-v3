@@ -23,8 +23,14 @@ class MemoryStore:
             Document(page_content=c, metadata=metadata)
             for c in self.splitter.split_text(text or "")
         ]
-        if docs:
-            self.store.add_documents(docs)
+        if not docs:
+            return 0
+        # Stable per-node ids => re-indexing the same node UPSERTS instead of appending
+        # duplicate vectors (which would skew retrieval). Falls back to auto ids when the
+        # text isn't tied to a node (e.g. ad-hoc index_text in tests).
+        node_id = metadata.get("node_id")
+        ids = [f"{node_id}:{i}" for i in range(len(docs))] if node_id else None
+        self.store.add_documents(docs, ids=ids)
         return len(docs)
 
     def index_decision(self, db: Session, project_id: str, node_id: str) -> int:
@@ -36,7 +42,12 @@ class MemoryStore:
         )
 
     def retrieve(self, query: str, k: int = 4) -> list[dict]:
-        results = self.store.similarity_search_with_score(query, k=k)
+        try:
+            results = self.store.similarity_search_with_score(query, k=k)
+        except ValueError:
+            # langchain raises ValueError('NaN values found') if a stored vector has zero
+            # norm (e.g. a degenerate embedding). Degrade to "no hits" rather than 500.
+            return []
         return [
             {"text": d.page_content, "metadata": d.metadata, "score": float(s)}
             for d, s in results

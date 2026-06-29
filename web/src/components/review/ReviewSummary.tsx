@@ -21,7 +21,24 @@ export function ReviewSummary() {
   const selectedStepId = useStore((s) => s.selectedStepId);
   const api = useStore((s) => s.api);
   const openReview = useStore((s) => s.openReview);
+  const setError = useStore((s) => s.setError);
   const detail = useStepDetail(selectedStepId);
+
+  const approve = async () => {
+    if (!selectedStepId) return;
+    try {
+      await api.reviewStep(selectedStepId, { kind: 'approve' });
+    } catch (e) {
+      setError(`승인에 실패했습니다: ${e instanceof Error ? e.message : '알 수 없는 오류'}`);
+    }
+  };
+  // tests actually connected to this step (no execution engine, so don't claim "green"
+  // when nothing is linked).
+  const hasTests = !!(
+    graph &&
+    selectedStepId &&
+    graph.edges.some((e) => e.kind === 'tested_by' && e.from === selectedStepId)
+  );
 
   if (!selectedStepId || !detail) {
     return (
@@ -66,14 +83,15 @@ export function ReviewSummary() {
             </div>
             <div className="rsum__metric">
               <span className="rsum__metric-label">TESTS</span>
-              <span className="rsum__metric-value rsum__metric-value--ok">● green</span>
+              {hasTests ? (
+                <span className="rsum__metric-value rsum__metric-value--ok">● green</span>
+              ) : (
+                <span className="rsum__metric-value">테스트 없음</span>
+              )}
             </div>
           </div>
           <div className="rsum__actions">
-            <button
-              className="rsum__approve"
-              onClick={() => void api.reviewStep(selectedStepId, { kind: 'approve' })}
-            >
+            <button className="rsum__approve" onClick={approve}>
               <CheckIcon size={15} />
               승인
             </button>

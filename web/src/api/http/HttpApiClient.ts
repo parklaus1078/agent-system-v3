@@ -64,7 +64,10 @@ export class HttpApiClient implements ApiClient {
     return { ticketId, steps: state.awaiting?.steps ?? [], title };
   }
   async approvePlan(proposal: PlanProposal): Promise<void> {
-    await this.post(`/tickets/${proposal.ticketId}/plan/approve`, { steps: proposal.steps });
+    await this.post(`/tickets/${proposal.ticketId}/plan/approve`, {
+      steps: proposal.steps,
+      title: proposal.title,
+    });
     this.notify();
   }
   async reviewStep(id: string, action: ReviewAction): Promise<void> {
@@ -76,10 +79,24 @@ export class HttpApiClient implements ApiClient {
 
   subscribe(cb: () => void): () => void {
     this.subs.add(cb);
-    const t = setInterval(cb, 1500); // light polling until SSE (Plan 3)
+    // Light polling until SSE (Plan 3). Skip ticks while the tab is hidden to avoid
+    // pointless background fetches; refresh once on return to visibility.
+    const tick = () => {
+      if (typeof document === 'undefined' || document.visibilityState === 'visible') cb();
+    };
+    const t = setInterval(tick, 1500);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') cb();
+    };
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', onVisible);
+    }
     return () => {
       this.subs.delete(cb);
       clearInterval(t);
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', onVisible);
+      }
     };
   }
 }

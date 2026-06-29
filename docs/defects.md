@@ -4,8 +4,9 @@
 
 - 대상 브랜치: `feat/frontend-ui-on-mock` (실제 구현+문서가 있는 곳; `main`은 stale → 머지 필요)
 - **상태 범례:** `OPEN` 미수정 · `FIXED` 수정+검증 · `WONTFIX` 의도된 동작
-- 현재 **전 항목 OPEN** (앱 소스 미수정).
-- 심각도: 🔴 HIGH(3) · 🟠 MED(6) · 🟡 LOW(3) · ⚪ MINOR/스펙드리프트(10) · ℹ️ 한계(2) = **24건**
+- **2026-06-29 수정 패스 완료:** 결함 코드 전부 수정 + 회귀 테스트 추가(backend `pytest` 45개 / frontend `vitest` 41개 모두 통과) + 라이브 브라우저 재검증. 각 항목 fix 위치는 아래 §7 참조. D-15/D-18은 의도된 동작으로 WONTFIX.
+- 수정 중 새로 발견된 잠재 결함 1건 추가: **D-25**(시뮬레이터 코드영역이 티켓 간 충돌).
+- 심각도: 🔴 HIGH(3) · 🟠 MED(6) · 🟡 LOW(3) · ⚪ MINOR/스펙드리프트(10) · ℹ️ 한계(2) + 신규 1 = **25건**
 
 ---
 
@@ -13,30 +14,31 @@
 
 | ID | 심각도 | 상태 | Flow | 한 줄 요약 |
 |----|:---:|:---:|---|---|
-| D-01 | 🔴 HIGH | OPEN | D2–D6 | 시드 리뷰 게이트가 409로 동작 불가 + 에러 무알림(무음 실패) |
-| D-02 | 🔴 HIGH | OPEN | E1,E3,E4 | 한국어 결정 임베딩 zero-vector → NaN → `/memory/search`·RAG 500 |
-| D-03 | 🔴 HIGH | OPEN | D4,E2 | takeover 후 막다른 길 → 티켓 영구 정지·프로젝트 완료/승격 불가 |
-| D-04 | 🟠 MED | OPEN | (전역) | 미처리 500 응답에 CORS 헤더 누락 → 브라우저가 에러조차 못 읽음 |
-| D-05 | 🟠 MED | OPEN | E2 | 위키 승격 기본 경로가 실제 `~/llm_wiki`(사용자 second-brain) |
-| D-06 | 🟠 MED | OPEN | E4 | `/memory/reindex`가 clear 없이 중복 append(진짜 reindex 아님) |
-| D-07 | 🟠 MED | OPEN | C1,C3 | plan 승인 시 title/intent/acceptance 비편집·미영속 (부분확인) |
-| D-08 | 🟠 MED | OPEN | C2 | 재계획이 기존 step 버리고 generic 재제안(FE/BE 불일치) |
-| D-09 | 🟠 MED | OPEN | A1,B3 | 폴링 미해제 + 매 1.5s 전체 그래프/step 재요청(낭비) |
-| D-10 | 🟠 MED | OPEN | A1 | 연결 끊김/오프라인 처리 없음("live" 배지는 실제 연결성과 무관) |
-| D-11 | 🟡 LOW | OPEN | E5 | 미시작 티켓 `/state`가 `done:true` 거짓 보고(`/graph`와 불일치) |
-| D-12 | 🟡 LOW | OPEN | (전역) | URL 라우팅·상태 영속 없음 → 새로고침 시 지도로 리셋 |
-| D-13 | 🟡 LOW | OPEN | B6 | 문서의 "CodeRegion 토글 partial" 표기 오류(실제 완전 동작) |
-| D-14 | ⚪ MINOR | OPEN | B4 | 홈에 "+ 목표·티켓" 버튼 없음(실제 "새 목표"+"분해 시작") |
-| D-15 | ⚪ MINOR | OPEN | B4 | 같은 프로젝트가 두 이름(`구독 티어 할일앱`/`구독 할일앱`)으로 표기 |
-| D-16 | ⚪ MINOR | OPEN | C1 | 트리거 라벨 불일치("+ 목표·티켓" vs 실제 "목표 · 티켓") |
-| D-17 | ⚪ MINOR | OPEN | D3,D4 | 버튼 라벨 불일치(수정 요청/직접 처리·인수 vs 수정요청/내가 인수) |
-| D-18 | ⚪ MINOR | OPEN | B5 | owning-path의 Step hop이 지도에 안 보임(step이 티켓으로 collapse) |
-| D-19 | ⚪ MINOR | OPEN | B5 | 트레이스 placeholder 과대광고(심볼/UI 인덱스 없음, 파일 라벨만 매칭) |
-| D-20 | ⚪ MINOR | OPEN | C2 | 다이어그램 문구 오해 소지("기존 티켓에 대해 재제안") |
-| D-21 | ⚪ MINOR | OPEN | D2–D5 | 키보드 단축키 a/r/t가 `<kbd>` 표시만, 핸들러 없음 |
-| D-22 | ⚪ MINOR | OPEN | D5 | DiffView "NEW"/"새 파일" 하드코딩(s4 patch는 빈 문자열) |
-| D-23 | ⚪ MINOR | OPEN | D5 | Tests 항상 "● green", Acceptance `met` 전이 없음(영원히 0/N) |
-| D-24 | ℹ️ 한계 | OPEN | E1,E2 | E1 브라우저 비관측 / E2 시드로 UI 트리거 사실상 불가 |
+| D-01 | 🔴 HIGH | ✅ FIXED | D2–D6 | 시드 리뷰 게이트가 409로 동작 불가 + 에러 무알림(무음 실패) |
+| D-02 | 🔴 HIGH | ✅ FIXED | E1,E3,E4 | 한국어 결정 임베딩 zero-vector → NaN → `/memory/search`·RAG 500 |
+| D-03 | 🔴 HIGH | ✅ FIXED | D4,E2 | takeover 후 막다른 길 → 티켓 영구 정지·프로젝트 완료/승격 불가 |
+| D-04 | 🟠 MED | ✅ FIXED | (전역) | 미처리 500 응답에 CORS 헤더 누락 → 브라우저가 에러조차 못 읽음 |
+| D-05 | 🟠 MED | ✅ FIXED | E2 | 위키 승격 기본 경로가 실제 `~/llm_wiki`(사용자 second-brain) |
+| D-06 | 🟠 MED | ✅ FIXED | E4 | `/memory/reindex`가 clear 없이 중복 append(진짜 reindex 아님) |
+| D-07 | 🟠 MED | ✅ FIXED | C1,C3 | plan 승인 시 title 미전송(intent/acceptance는 비편집) |
+| D-08 | 🟠 MED | ✅ FIXED | C2 | 재계획이 기존 step 버리고 generic 재제안(FE/BE 불일치) |
+| D-09 | 🟠 MED | ✅ FIXED | A1,B3 | 폴링 낭비(매 tick 전체 그래프/step 재요청) |
+| D-10 | 🟠 MED | ✅ FIXED | A1 | 연결 끊김/오프라인 처리 없음("live" 배지는 실제 연결성과 무관) |
+| D-11 | 🟡 LOW | ✅ FIXED | E5 | 미시작 티켓 `/state`가 `done:true` 거짓 보고(`/graph`와 불일치) |
+| D-12 | 🟡 LOW | ✅ FIXED | (전역) | URL 라우팅·상태 영속 없음 → 새로고침 시 지도로 리셋 |
+| D-13 | 🟡 LOW | ✅ FIXED | B6 | 문서의 "CodeRegion 토글 partial" 표기 오류(실제 완전 동작) |
+| D-14 | ⚪ MINOR | ✅ FIXED | B4 | 홈에 "+ 목표·티켓" 버튼 없음(실제 "새 목표"+"분해 시작") |
+| D-15 | ⚪ MINOR | ⊘ WONTFIX | B4 | 같은 프로젝트가 두 이름 표기 — `data.short`는 브레드크럼용 의도된 축약 |
+| D-16 | ⚪ MINOR | ✅ FIXED | C1 | 트리거 라벨 불일치(문서 수정) |
+| D-17 | ⚪ MINOR | ✅ FIXED | D3,D4 | 버튼 라벨 불일치(문서 수정) |
+| D-18 | ⚪ MINOR | ⊘ WONTFIX | B5 | Step hop 미표시 — 지도는 zoom-out(step은 콕핏에서 표시)이라 의도된 collapse |
+| D-19 | ⚪ MINOR | ✅ FIXED | B5 | 트레이스 placeholder 과대광고(심볼/UI 인덱스 없음, 파일 라벨만 매칭) |
+| D-20 | ⚪ MINOR | ✅ FIXED | C2 | 다이어그램 문구 — D-08 수정으로 실제 동작이 문구와 일치하게 됨 |
+| D-21 | ⚪ MINOR | ✅ FIXED | D2–D5 | 키보드 단축키 a/r/t가 `<kbd>` 표시만, 핸들러 없음 |
+| D-22 | ⚪ MINOR | ✅ FIXED | D5 | DiffView "NEW"/"새 파일" 하드코딩(s4 patch는 빈 문자열) |
+| D-23 | ⚪ MINOR | ✅ FIXED | D5 | Tests 항상 "● green"(연결된 테스트 없으면 거짓) |
+| D-24 | ℹ️ 한계 | ⊘ N/A | E1,E2 | E1 브라우저 비관측 / E2 시드로 UI 트리거 사실상 불가 (관측 제약, 결함 아님) |
+| D-25 | 🟠 MED | ✅ FIXED | D1 | (신규) 시뮬레이터가 티켓마다 `generated/step_N.ts` 동일 경로 → 코드영역 노드 티켓 간 충돌 |
 
 ---
 
@@ -145,9 +147,40 @@
 
 ---
 
-## 권장 수정 순서
-1. **D-01 + D-10**(에러 표면화) — 무음 실패가 "통제탑" 신뢰성 정면 훼손 + 시드 체크포인트 생성.
+## 6. 권장 수정 순서 (참고 — 아래 §7에서 전부 적용됨)
+1. **D-01 + D-10**(에러 표면화) — 무음 실패가 "통제탑" 신뢰성 정면 훼손.
 2. **D-02**(임베딩 `\w+`) — 한 줄, RAG 실동작 + 500 제거.
 3. **D-03**(takeover 경로) — 없으면 프로젝트 완료·승격 불가.
 4. **D-05**(위키 경로) — 실제 second-brain 오염 방지.
 5. D-04/D-06/D-09/D-11/D-12/D-13 및 D-14~D-23 라벨·문서 정합.
+
+---
+
+## 7. 수정 내역 (2026-06-29)
+
+검증: backend `pytest` **45 passed**(신규 회귀 테스트 `api/tests/test_defect_fixes.py` 8개 포함),
+frontend `tsc --noEmit` 0 error + `vitest` **41 passed**, 라이브 브라우저 재검증(D-01/D-02/D-09/D-01-toast).
+
+| ID | 수정 위치 | 요지 |
+|----|---|---|
+| D-01 | `api/app/routers/lifecycle.py` `_review_db_direct`/`_ticket_of_step`(DB 기반) · `web/src/components/review/{ReviewSummary,ReviewPane}.tsx` · `web/src/main.tsx`(ErrorBoundary+unhandledrejection) · `Shell.tsx`+`Shell.css`(토스트) | 시드 게이트를 DB-direct로 동작 가능하게 + 모든 쓰기 실패를 토스트로 표면화 |
+| D-02 | `api/app/services/embeddings.py`(`\w+`) · `memory.py`(retrieve try/except, zero-norm 방어) | 한국어 비-0 임베딩 + NaN 500 제거 |
+| D-03 | (D-01과 동일 경로) takeover 후 step은 awaiting_review 유지 → 후속 승인이 DB-direct로 완료 | 막다른 길 해소 |
+| D-04 | `api/app/main.py` `_CatchAllMiddleware`(CORS 안쪽) | 미처리 500도 CORS 헤더 유지 |
+| D-05 | `api/app/services/promotion.py` `_wiki_dir`(미설정 시 None→skip) | 실제 `~/llm_wiki` 오염 방지 |
+| D-06 | `api/app/services/memory.py` `index_text`(node_id 기반 안정 id upsert) | reindex 중복 제거(멱등) |
+| D-07 | `web/src/api/http/HttpApiClient.ts`(approve에 title 전송) · `api/app/schemas.py`(`PlanApproveIn.title`) · `lifecycle.py`(approve에 title 전달) | title 누락 제거 |
+| D-08 | `api/app/routers/lifecycle.py` `_existing_steps` · `services/lifecycle_graph.py` `propose`(기존 step 우선) | 재계획이 기존 step에서 재제안(FE/BE 일치) |
+| D-09 | `web/src/store/useStore.ts` `load`(미변경 시 ref 유지) · `api/http/HttpApiClient.ts`(hidden 시 폴링 정지+해제) | tick마다 재요청·재렌더 제거 |
+| D-10 | `web/src/store/useStore.ts`(`online`+try/catch) · `Shell.tsx`(offline 표시) | 연결 끊김 표면화 |
+| D-11 | `api/app/routers/lifecycle.py` `_payload`(`started and not snap.next`) | 미시작 티켓 done:false |
+| D-12 | `web/src/store/useStore.ts`(zustand `persist`, sessionStorage, nav 상태) | 새로고침 시 콕핏/선택 복원 |
+| D-13/D-20 | `docs/user-flows-sequence-diagrams.md`(B6 note, 상태 legend, C2 문구) | 문서 정확화 |
+| D-14/D-16/D-17 | `docs/user-flows-sequence-diagrams.md`(트리거·버튼 라벨) | 라벨 일치 |
+| D-19 | `web/src/components/bugtrace/BugTrace.tsx`(placeholder "파일 · 코드 영역") | 과대광고 제거 |
+| D-21 | `web/src/components/review/ReviewPane.tsx`(keydown a/r/t 핸들러) | 키보드 단축키 실동작 |
+| D-22 | `web/src/components/review/DiffView.tsx`(`isNewFile` 판정) | NEW/새 파일 데이터 기반 |
+| D-23 | `web/src/components/review/{ReviewSummary,ReviewPane}.tsx`(연결 테스트 있을 때만 "green") | 거짓 green 제거 |
+| D-25 | `api/app/routers/lifecycle.py` `_sim_write`(`generated/{tid}/…`) | 티켓별 코드영역 노드 분리(충돌 제거) |
+
+**WONTFIX(의도된 동작):** D-15(브레드크럼은 `data.short` 축약명 사용), D-18(지도는 zoom-out이라 step을 티켓으로 collapse; step은 콕핏 레인에서 확인). D-24는 관측 제약(결함 아님).

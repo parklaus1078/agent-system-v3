@@ -15,6 +15,7 @@ class TicketState(TypedDict, total=False):
     repo_dir: str
     objective: str
     ticket_title: str
+    existing_steps: list[dict]  # a re-planned ticket's current steps (seeds the proposal)
     proposed: list[dict]   # the proposed plan (computed once, before the approval gate)
     steps: list[dict]      # StepSpec dicts (JSON-serializable for the checkpointer)
     current: int           # index of the step being executed / reviewed
@@ -60,6 +61,11 @@ def build_graph(
     """
 
     def propose(state: TicketState) -> dict:
+        # Re-planning an existing ticket: surface its current steps for editing rather
+        # than discarding them for a fresh generic proposal (matches the mock client).
+        existing = state.get("existing_steps")
+        if existing:
+            return {"proposed": list(existing)}
         context = "\n".join(state.get("decisions", []))
         proposed = [
             s.model_dump()

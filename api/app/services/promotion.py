@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
 
@@ -8,9 +9,16 @@ from sqlalchemy.orm import Session
 
 from ..models import Node
 
+logger = logging.getLogger("asv3.promotion")
 
-def _wiki_dir(wiki_root: str | None) -> Path:
-    root = wiki_root or os.getenv("ASV3_LLM_WIKI_ROOT", "/home/kay/llm_wiki")
+
+def _wiki_dir(wiki_root: str | None) -> Path | None:
+    """Resolve the wiki decisions dir, or None if no root is configured. We do NOT
+    default to a real absolute path (a previous default of /home/kay/llm_wiki wrote into
+    the user's actual second-brain) — promotion is skipped when unconfigured."""
+    root = wiki_root or os.getenv("ASV3_LLM_WIKI_ROOT")
+    if not root:
+        return None
     d = Path(root) / "kay_second_brain" / "wiki" / "decisions"
     d.mkdir(parents=True, exist_ok=True)
     return d
@@ -18,8 +26,13 @@ def _wiki_dir(wiki_root: str | None) -> Path:
 
 def promote_project(db: Session, project_id: str, memory, wiki_root: str | None = None) -> list[str]:
     """On project completion, distill each Decision into the personal ~/llm_wiki and
-    index it so future projects recall it. Idempotent: one file per node (overwrite)."""
+    index it so future projects recall it. Idempotent: one file per node (overwrite).
+    No-op (returns []) when no wiki root is configured, so demo/test runs never touch a
+    real vault — set ASV3_LLM_WIKI_ROOT (or pass wiki_root) to enable promotion."""
     d = _wiki_dir(wiki_root)
+    if d is None:
+        logger.warning("promotion skipped: ASV3_LLM_WIKI_ROOT not set (no wiki root configured)")
+        return []
     written: list[str] = []
     decisions = db.scalars(
         select(Node).where(Node.project_id == project_id, Node.kind == "decision")

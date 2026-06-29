@@ -18,7 +18,10 @@ class DeterministicEmbeddings(Embeddings):
 
     def _vec(self, text: str) -> list[float]:
         v = [0.0] * self.dim
-        for tok in re.findall(r"[a-z0-9]+", (text or "").lower()):
+        # \w (Unicode) so non-ASCII text (e.g. Korean decisions) yields real tokens — an
+        # ASCII-only [a-z0-9]+ produced an all-zero vector for CJK text, which then made
+        # cosine similarity NaN and 500'd /memory/search and RAG-using step execution.
+        for tok in re.findall(r"\w+", (text or "").lower()):
             h = int(hashlib.md5(tok.encode()).hexdigest(), 16)  # noqa: S324 (non-crypto hash)
             v[h % self.dim] += 1.0
         norm = math.sqrt(sum(x * x for x in v)) or 1.0
