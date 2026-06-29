@@ -138,11 +138,14 @@ DATABASE_URL="sqlite+pysqlite:///./dev.db" \
 
 프론트는 동일: `VITE_API_BASE=http://127.0.0.1:8099 npm run dev`.
 
-**선택 — 실제 임베딩 & 영속 상태(포트폴리오용 풀스택)**
+**선택 — 실제 임베딩 & 영속 상태(Postgres + pgvector)**
 ```bash
 .venv/bin/pip install -e ".[postgres,rag]"     # psycopg/pgvector + huggingface 임베딩
-# Postgres를 띄우고 DATABASE_URL을 postgres로:
-DATABASE_URL="postgresql+psycopg://user:pass@localhost:5432/asv3" \
+
+# Postgres+pgvector는 컨테이너로 띄우고(아래 "Docker — DB만 띄우기" 참고) api는 호스트에서:
+docker compose -f docker-compose.db.yml up -d
+
+DATABASE_URL="postgresql+psycopg://ct:ct@localhost:5432/controltower" \
   ASV3_AGENT_MODE=real ASV3_EMBEDDINGS=huggingface ASV3_CHECKPOINTER=postgres \
   ASV3_TARGET_REPO_DIR=/path/to/your/target-repo ASV3_LLM_WIKI_ROOT="$HOME/llm_wiki" \
   .venv/bin/python -m uvicorn app.main:app --port 8099
@@ -154,6 +157,38 @@ DATABASE_URL="postgresql+psycopg://user:pass@localhost:5432/asv3" \
 - `ASV3_LLM_WIKI_ROOT` 설정 시, 프로젝트 완료(전 티켓 done)에 Decision이 그 위키로 승격된다(미설정이면 skip).
 
 > 빠른 점검: `simulated`로 흐름을 먼저 검증(쿼터 0)한 뒤 `ASV3_AGENT_MODE=real`로 바꿔 같은 명령을 돌리면 된다.
+
+---
+
+## Docker
+
+### DB만 띄우기 (권장 — api/web는 호스트에서)
+
+Postgres + pgvector **만** 컨테이너로 올린다. 호스트에서 돌리는 api(특히 `real` 모드 + `ASV3_CHECKPOINTER=postgres`/
+`ASV3_EMBEDDINGS=huggingface`)가 `localhost:5432`로 붙는다. (vector 확장은 `db/init/01-extensions.sql`가 자동 생성.)
+
+```bash
+docker compose -f docker-compose.db.yml up -d        # 시작 (localhost:5432)
+docker compose -f docker-compose.db.yml logs -f db   # 로그
+docker compose -f docker-compose.db.yml down         # 정지 (데이터 유지)
+docker compose -f docker-compose.db.yml down -v      # 정지 + 데이터 삭제
+```
+
+접속 문자열: `DATABASE_URL=postgresql+psycopg://ct:ct@localhost:5432/controltower`
+(자격증명/포트는 `.env` 또는 `POSTGRES_USER`/`POSTGRES_PASSWORD`/`POSTGRES_DB`/`POSTGRES_PORT`로 덮어쓰기 가능.)
+
+스키마는 api가 부팅 시 자동 생성한다. 데모 그래프를 넣으려면:
+```bash
+cd api && DATABASE_URL="postgresql+psycopg://ct:ct@localhost:5432/controltower" .venv/bin/python seed_demo.py
+```
+
+### 풀스택 (web + api + db 한 번에)
+
+```bash
+docker compose up --build      # → http://localhost:8080 (web), http://localhost:8000/docs (api)
+```
+컨테이너엔 Claude 자격증명이 없어 기본 `simulated` 모드로 돈다. 노브는 `.env`(=`.env.example` 복사)로 조절.
+이 풀스택의 db는 호스트 포트를 열지 않는다(컨테이너끼리 내부 네트워크로 통신) — 호스트에서 붙으려면 위 **DB만 띄우기**를 쓴다.
 
 ---
 
@@ -215,6 +250,10 @@ docs/
   user-flows-sequence-diagrams.md         모든 사용자 흐름(시퀀스 다이어그램)
   user-flows-e2e-findings.md              E2E 테스트 결과
   defects.md                              결함 레지스트리(상태·근본원인·수정 위치)
+docker-compose.yml                        풀스택(web+api+db)
+docker-compose.db.yml                     DB만(Postgres+pgvector, localhost:5432)
+db/init/01-extensions.sql                 첫 부팅 시 CREATE EXTENSION vector
+.env.example                              docker 노브(.env로 복사)
 ```
 
 ---

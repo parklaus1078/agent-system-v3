@@ -1,0 +1,31 @@
+# DB only — Postgres + pgvector, published on the host (localhost:5432).
+# Use this when you run the api/web ON YOUR MACHINE (e.g. `real` mode) and only want the
+# database in a container:
+#   docker compose -f docker-compose.db.yml up -d        # start
+#   docker compose -f docker-compose.db.yml down         # stop  (add -v to wipe data)
+#   docker compose -f docker-compose.db.yml logs -f db   # logs
+#
+# It shares the same volume / credentials / init script as docker-compose.yml, so the data
+# is identical whether you bring up db-only or the full stack. Connect with:
+#   DATABASE_URL=postgresql+psycopg://ct:ct@localhost:5432/controltower
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ct}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ct}
+      POSTGRES_DB: ${POSTGRES_DB:-controltower}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432" # publish to the host (the full-stack compose does not)
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro # 01-extensions.sql -> CREATE EXTENSION vector
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ct} -d ${POSTGRES_DB:-controltower}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+volumes:
+  db-data: # same named volume as docker-compose.yml (shared within this project)
