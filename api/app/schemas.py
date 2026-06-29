@@ -68,3 +68,21 @@ class ApproveIn(BaseModel):
     ticketId: str
     steps: list[PlanStep] = []
     title: str | None = None
+
+
+class PlanStartIn(BaseModel):
+    title: str | None = None  # for a new goal: the ticket title/objective text
+
+
+class PlanApproveIn(BaseModel):
+    # optional human-edited steps; omit to accept the proposed plan verbatim
+    steps: list[PlanStep] | None = None
+
+
+class LifecycleStateOut(BaseModel):
+    ticketId: str
+    next: list[str] = []
+    done: bool = False
+    current: int | None = None
+    steps: list[PlanStep] = []
+    awaiting: dict | None = None  # the pending interrupt payload (plan_approval | review)

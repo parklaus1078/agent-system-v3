@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .db import init_db
 from .routers import graph as graph_router
+from .routers import lifecycle as lifecycle_router
 
 
 @asynccontextmanager
@@ -23,6 +24,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(graph_router.router)
+app.include_router(lifecycle_router.router)
 
 
 @app.get("/health")

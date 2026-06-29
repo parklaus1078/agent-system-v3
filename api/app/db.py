@@ -44,3 +44,27 @@ def get_session() -> Iterator[Session]:
         yield db
     finally:
         db.close()
+
+
+_CHECKPOINTER = None
+
+
+def make_checkpointer():
+    """Process-wide LangGraph checkpointer (singleton). PostgresSaver when DATABASE_URL
+    is Postgres (durable across restarts), else an in-memory MemorySaver — fine for the
+    SQLite demo/tests, where lifecycle state lives for the life of the server process.
+    PostgresSaver is imported lazily so the SQLite path needs no libpq/psycopg."""
+    global _CHECKPOINTER
+    if _CHECKPOINTER is not None:
+        return _CHECKPOINTER
+    if DATABASE_URL.startswith("postgres"):
+        from langgraph.checkpoint.postgres import PostgresSaver
+
+        cp = PostgresSaver.from_conn_string(DATABASE_URL).__enter__()
+        cp.setup()
+        _CHECKPOINTER = cp
+    else:
+        from langgraph.checkpoint.memory import MemorySaver
+
+        _CHECKPOINTER = MemorySaver()
+    return _CHECKPOINTER
