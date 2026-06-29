@@ -19,7 +19,8 @@ from ..schemas_plan import StepSpec
 from ..services.executor import CliExecutor, SimulatedExecutor
 from ..services.lifecycle_graph import build_graph
 from ..services.planner import CliPlanner, LangChainPlanner, SimulatedPlanner
-from ..services.prompt_build import build_step_prompt
+from ..services.prompt_build import build_step_prompt, step_rag_context
+from .memory import MEMORY
 
 router = APIRouter(prefix="/projects/{pid}", tags=["lifecycle"])
 logger = logging.getLogger("asv3.lifecycle")
@@ -84,10 +85,16 @@ def _build(db: Session, pid: str, tid: str, title: str | None = None):
                 db.add(
                     Edge(id=f"decided:{sid}", project_id=pid, src=sid, dst=did, kind="decided")
                 )
+                # index the decision text so later steps can recall it via RAG
+                MEMORY.index_text(
+                    decision, {"project_id": pid, "node_id": did, "kind": "decision"}
+                )
         db.commit()
 
     def build_prompt(state, step) -> str:
-        return build_step_prompt(db, pid, tid, StepSpec(**step))
+        spec = StepSpec(**step)
+        rag = step_rag_context(MEMORY, state.get("objective", ""), spec)
+        return build_step_prompt(db, pid, tid, spec, rag_context=rag)
 
     if _mode() == "real":
         brain = os.environ.get("ASV3_BRAIN", "claude")

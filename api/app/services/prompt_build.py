@@ -7,6 +7,14 @@ from ..models import Node
 from ..schemas_plan import StepSpec
 
 
+def step_rag_context(memory, objective: str, step) -> str:
+    """Semantic context packet for a step: the most relevant prior decisions/wiki pages
+    for `<objective> <step.intent>`, injected via build_step_prompt(rag_context=...)."""
+    if memory is None:
+        return ""
+    return memory.context_packet(f"{objective} {step.intent}")
+
+
 def _objective(db: Session, project_id: str) -> str:
     for n in get_graph(db, project_id)["nodes"]:
         if n["kind"] == "objective":
