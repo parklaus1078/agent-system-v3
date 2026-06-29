@@ -79,7 +79,7 @@ export function PlanApproval({
 
   const approve = async () => {
     setBusy(true);
-    await api.approvePlan({ ticketId: ticketId ?? 't-new', steps });
+    await api.approvePlan({ ticketId: ticketId ?? 't-new', steps, title });
     onApproved();
   };
 

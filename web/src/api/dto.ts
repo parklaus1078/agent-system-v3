@@ -23,4 +23,5 @@ export type ReviewAction =
 export interface PlanProposal {
   ticketId: string;
   steps: { label: string; intent: string; acceptance: string }[];
+  title?: string; // for a new goal, the label of the ticket to create
 }

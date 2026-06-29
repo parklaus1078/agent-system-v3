@@ -1,4 +1,11 @@
-from app.graph.store import seed_graph, get_graph, owning_path, review_step, approve_plan
+from app.graph.store import (
+    seed_graph,
+    get_graph,
+    owning_path,
+    review_step,
+    approve_plan,
+    neighbors,
+)
 from app.graph.diff_ingest import apply_step_diff
 from app.models import Node
 
@@ -60,3 +67,13 @@ def test_approve_plan_persists_steps(session):
     assert {"새 step A", "새 step B"} <= labels
     # ticket moves to executing once a plan is approved
     assert session.get(Node, "t1").status == "executing"
+
+
+def test_approve_plan_creates_new_ticket_under_objective(session):
+    _seed(session)  # has objective "obj"
+    approve_plan(session, "p1", "t-new", ["스펙", "구현"], title="결제 붙이기")
+    nt = session.get(Node, "t-new")
+    assert nt is not None and nt.kind == "ticket" and nt.label == "결제 붙이기"
+    # linked to the objective
+    parents = [p.id for p in neighbors(session, "p1", "t-new", "in")]
+    assert "obj" in parents

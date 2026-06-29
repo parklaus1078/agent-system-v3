@@ -59,4 +59,4 @@ def propose_plan(pid: str, body: ProposeIn):
 
 @router.post("/plan/approve")
 def approve_plan(pid: str, body: ApproveIn, db: Session = Depends(get_session)):
-    return store.approve_plan(db, pid, body.ticketId, [s.label for s in body.steps])
+    return store.approve_plan(db, pid, body.ticketId, [s.label for s in body.steps], body.title)

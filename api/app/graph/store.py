@@ -59,9 +59,38 @@ def review_step(db: Session, project_id: str, step_id: str, kind: str) -> dict:
     return {"ok": True, "status": node.status}
 
 
-def approve_plan(db: Session, project_id: str, ticket_id: str, step_labels: list[str]) -> dict:
+def approve_plan(
+    db: Session, project_id: str, ticket_id: str, step_labels: list[str], title: str | None = None
+) -> dict:
     """Replace a ticket's steps with the approved list and start execution.
-    Persists new step nodes + `has` edges; removes the old step children."""
+    Persists new step nodes + `has` edges; removes the old step children. If the
+    ticket doesn't exist yet (a new goal), creates it under the objective."""
+    ticket = db.get(Node, ticket_id)
+    if ticket is None:
+        ticket = Node(
+            id=ticket_id,
+            project_id=project_id,
+            kind="ticket",
+            label=title or ticket_id,
+            status="executing",
+            data={},
+        )
+        db.add(ticket)
+        objective = db.scalars(
+            select(Node).where(Node.project_id == project_id, Node.kind == "objective")
+        ).first()
+        if objective is not None:
+            db.add(
+                Edge(
+                    id=f"has-{objective.id}-{ticket_id}",
+                    project_id=project_id,
+                    src=objective.id,
+                    dst=ticket_id,
+                    kind="has",
+                )
+            )
+        db.flush()
+
     has_edges = db.scalars(
         select(Edge).where(
             Edge.project_id == project_id, Edge.src == ticket_id, Edge.kind == "has"

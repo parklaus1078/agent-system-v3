@@ -67,3 +67,4 @@ class PlanProposalOut(BaseModel):
 class ApproveIn(BaseModel):
     ticketId: str
     steps: list[PlanStep] = []
+    title: str | None = None
