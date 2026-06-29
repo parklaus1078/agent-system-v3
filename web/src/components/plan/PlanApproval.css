@@ -5,10 +5,33 @@
 }
 .plan--loading {
   padding: 44px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
   text-align: center;
   color: var(--muted);
   font-size: 13px;
 }
+.plan__loadhint { font-size: 11px; color: var(--ink-2, #888); }
+.plan__spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--border, #ccd3dd);
+  border-top-color: var(--accent, #2f6fed);
+  animation: plan-spin 0.7s linear infinite;
+  display: inline-block;
+  vertical-align: -3px;
+}
+.plan__spinner--on-dark {
+  width: 13px;
+  height: 13px;
+  border-color: rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  margin-right: 6px;
+}
+@keyframes plan-spin { to { transform: rotate(360deg); } }
 .plan__head {
   display: flex;
   align-items: center;

@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import logging
 import subprocess
+import time
 from dataclasses import dataclass
 from typing import Callable, Protocol
+
+logger = logging.getLogger("asv3.executor")
 
 
 @dataclass
@@ -44,10 +48,20 @@ class CliExecutor:
         return ["codex", "exec", "--model", self.model, prompt]
 
     def run(self, repo_dir: str, prompt: str) -> ExecResult:
+        cmd = self._cmd(prompt)
+        logger.info(
+            "executor[%s] spawn: cwd=%s model=%s prompt=%dch (%s -p …)",
+            self.brain, repo_dir, self.model, len(prompt), cmd[0],
+        )
+        t0 = time.monotonic()
         try:
             proc = subprocess.run(  # noqa: S603
-                self._cmd(prompt), cwd=repo_dir, capture_output=True, text=True
+                cmd, cwd=repo_dir, capture_output=True, text=True
             )
+            ms = int((time.monotonic() - t0) * 1000)
+            logger.info("executor[%s] exit: rc=%d %dms", self.brain, proc.returncode, ms)
+            if proc.returncode != 0:
+                logger.warning("executor[%s] stderr: %s", self.brain, (proc.stderr or "")[-400:])
             return ExecResult(
                 summary=(proc.stdout or "").strip()[:500],
                 decision=None,
@@ -55,4 +69,5 @@ class CliExecutor:
                 output=proc.stdout + proc.stderr,
             )
         except FileNotFoundError as exc:
+            logger.error("executor[%s] CLI not found (%s) — is it on PATH?", self.brain, exc)
             return ExecResult(summary="", decision=None, ok=False, output=str(exc))

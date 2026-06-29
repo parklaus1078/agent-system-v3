@@ -44,6 +44,9 @@ export function Shell({ onHome }: { onHome?: () => void }) {
   const [highlightIds, setHighlightIds] = useState<string[] | null>(null);
   const [goalFlow, setGoalFlow] = useState<'none' | 'goal' | 'plan'>('none');
   const [pendingGoal, setPendingGoal] = useState('');
+  // Stable ticket id minted ONCE per goal so re-opening the plan modal reuses the same
+  // /plan thread instead of creating duplicate tickets.
+  const [pendingTid, setPendingTid] = useState('');
   const [legendOpen, setLegendOpen] = useState(false);
 
   useEffect(() => {
@@ -168,22 +171,27 @@ export function Shell({ onHome }: { onHome?: () => void }) {
               onCancel={() => setGoalFlow('none')}
               onSubmit={(goal) => {
                 setPendingGoal(goal);
+                setPendingTid(`t-${Date.now().toString(36)}`); // mint once for this goal
                 setGoalFlow('plan');
               }}
             />
           </Modal>
         )}
         {goalFlow === 'plan' && (
-          <Modal onClose={() => setGoalFlow('none')}>
+          <Modal onClose={() => setGoalFlow('none')} dismissable={false}>
             <PlanApproval
               goal={pendingGoal}
+              newTicketId={pendingTid}
               onCancel={() => setGoalFlow('none')}
-              onApproved={() => setGoalFlow('none')}
+              onApproved={() => {
+                setGoalFlow('none');
+                selectTicket(pendingTid); // navigate to the new ticket so the user sees it
+              }}
             />
           </Modal>
         )}
         {planTicketId && (
-          <Modal onClose={closePlan}>
+          <Modal onClose={closePlan} dismissable={false}>
             <PlanApproval ticketId={planTicketId} onCancel={closePlan} onApproved={closePlan} />
           </Modal>
         )}

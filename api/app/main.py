@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -32,6 +33,14 @@ class _CatchAllMiddleware(BaseHTTPMiddleware):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Configure logging so the app's INFO logs (asv3.*: planner/executor 'claude -p'
+    # invocations, lifecycle transitions) actually reach stdout — without this they
+    # propagate to Python's root WARNING lastResort handler and are dropped.
+    logging.basicConfig(
+        level=os.getenv("ASV3_LOG_LEVEL", "INFO"),
+        format="%(asctime)s %(levelname)s %(name)s | %(message)s",
+    )
+    logging.getLogger("asv3").setLevel(os.getenv("ASV3_LOG_LEVEL", "INFO"))
     init_db()
     yield
 

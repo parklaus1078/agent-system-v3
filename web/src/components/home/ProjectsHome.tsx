@@ -17,6 +17,7 @@ export function ProjectsHome({ onOpenProject }: { onOpenProject: () => void }) {
   const setError = useStore((s) => s.setError);
   const [goal, setGoal] = useState('');
   const [planning, setPlanning] = useState(false);
+  const [planTid, setPlanTid] = useState(''); // stable id minted once per goal (no dup tickets)
   const [info, setInfo] = useState<ProjectInfo | null>(null);
   const [editingRepo, setEditingRepo] = useState(false);
   const [repoInput, setRepoInput] = useState('');
@@ -74,7 +75,10 @@ export function ProjectsHome({ onOpenProject }: { onOpenProject: () => void }) {
               <button
                 className="btn btn--primary"
                 onClick={() => {
-                  if (trimmed) setPlanning(true);
+                  if (trimmed) {
+                    setPlanTid(`t-${Date.now().toString(36)}`); // mint once for this goal
+                    setPlanning(true);
+                  }
                 }}
               >
                 분해 시작
@@ -86,10 +90,12 @@ export function ProjectsHome({ onOpenProject }: { onOpenProject: () => void }) {
 
         <section className="home__section">
           <h2 className="home__label">진행 중인 프로젝트</h2>
-          {objective && (
+          {(objective || tickets.length > 0) && (
             <button className="home__project" onClick={onOpenProject}>
               <div className="home__project-head">
-                <span className="home__project-name">{objective.label}</span>
+                <span className="home__project-name">
+                  {objective?.label ?? tickets[0]?.label ?? '프로젝트'}
+                </span>
                 <span className="home__project-meta mono">
                   {tickets.length} tickets · {steps.length} steps
                 </span>
@@ -100,8 +106,8 @@ export function ProjectsHome({ onOpenProject }: { onOpenProject: () => void }) {
                   </span>
                 )}
               </div>
-              {typeof objective.data?.description === 'string' && (
-                <p className="home__project-desc">{objective.data.description}</p>
+              {typeof objective?.data?.description === 'string' && (
+                <p className="home__project-desc">{objective.data.description as string}</p>
               )}
               <div className="home__bars">
                 {tickets.map((t) => {
@@ -117,7 +123,7 @@ export function ProjectsHome({ onOpenProject }: { onOpenProject: () => void }) {
               </div>
             </button>
           )}
-          {objective && (
+          {(objective || tickets.length > 0) && (
             <div className="home__repo">
               <span className="home__repo-label">대상 레포</span>
               {editingRepo ? (
@@ -161,9 +167,10 @@ export function ProjectsHome({ onOpenProject }: { onOpenProject: () => void }) {
       </main>
 
       {planning && (
-        <Modal onClose={() => setPlanning(false)}>
+        <Modal onClose={() => setPlanning(false)} dismissable={false}>
           <PlanApproval
             goal={trimmed}
+            newTicketId={planTid}
             onCancel={() => setPlanning(false)}
             onApproved={() => {
               setPlanning(false);

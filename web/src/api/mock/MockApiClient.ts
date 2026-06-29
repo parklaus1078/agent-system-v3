@@ -37,8 +37,10 @@ export class MockApiClient implements ApiClient {
     };
   }
 
-  async proposePlan(target: { goal: string } | { ticketId: string }): Promise<PlanProposal> {
-    if ('ticketId' in target) {
+  async proposePlan(
+    target: { goal: string; ticketId?: string } | { ticketId: string },
+  ): Promise<PlanProposal> {
+    if (!('goal' in target)) {
       const ticket = this.graph.nodes.find((n) => n.id === target.ticketId);
       const existing = neighbors(this.graph, target.ticketId, 'out')
         .filter((n) => n.kind === 'step')
@@ -57,7 +59,7 @@ export class MockApiClient implements ApiClient {
     }
     const goal = target.goal;
     return {
-      ticketId: 't-new',
+      ticketId: ('ticketId' in target && target.ticketId) || 't-new',
       title: goal,
       steps: [
         { label: '스펙·골격', intent: `${goal} 스펙 정리`, acceptance: '스펙 합의' },

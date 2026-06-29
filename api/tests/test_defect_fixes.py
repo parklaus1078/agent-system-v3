@@ -256,6 +256,57 @@ def test_project_info_and_repo_override_endpoints(monkeypatch):
     assert r["repoSource"] == "workspace" and r["repoDir"] == "/tmp/ws-test/pinfo"
 
 
+def test_propose_does_not_persist_ticket_and_approve_creates_objective(repo, monkeypatch):
+    """260629 bugs #3/#4: a new goal must NOT persist a ticket at propose time (no
+    orphan/duplicate), and approving must create the project's Objective (so ProjectsHome
+    isn't empty) when none exists."""
+    monkeypatch.setenv("ASV3_AGENT_MODE", "simulated")
+    monkeypatch.setenv("ASV3_TARGET_REPO_DIR", repo)
+    init_db()
+    from app.main import app
+
+    c = TestClient(app)
+    pid, tid = "pfresh", "pfresh-t1"  # fresh project, NO objective seeded
+    body = c.post(f"/projects/{pid}/tickets/{tid}/plan", json={"title": "다크 모드"}).json()
+    assert body["awaiting"]["type"] == "plan_approval"
+    db = SessionLocal()
+    assert db.get(Node, tid) is None  # not persisted at propose -> no orphan
+    assert db.query(Node).filter(Node.project_id == pid, Node.kind == "objective").count() == 0
+    db.close()
+
+    c.post(f"/projects/{pid}/tickets/{tid}/plan/approve", json={"steps": body["awaiting"]["steps"]})
+    db = SessionLocal()
+    assert db.get(Node, tid) is not None  # ticket created on approve
+    objs = db.query(Node).filter(Node.project_id == pid, Node.kind == "objective").all()
+    assert len(objs) == 1 and objs[0].label == "다크 모드"  # objective auto-created from goal
+    db.close()
+
+
+def test_step_detail_returns_real_diff_patch(repo, monkeypatch):
+    """260629 bug #9: the review diff must carry real patch content (was patch='')."""
+    monkeypatch.setenv("ASV3_AGENT_MODE", "simulated")
+    monkeypatch.setenv("ASV3_TARGET_REPO_DIR", repo)
+    init_db()
+    from app.main import app
+
+    c = TestClient(app)
+    pid, tid = "pdiff", "pdiff-t1"
+    body = c.post(f"/projects/{pid}/tickets/{tid}/plan", json={"title": "t"}).json()
+    c.post(f"/projects/{pid}/tickets/{tid}/plan/approve", json={"steps": body["awaiting"]["steps"]})
+    detail = c.get(f"/projects/{pid}/steps/{tid}-s1").json()
+    assert detail["diff"], "step should have a diff"
+    assert any(b["patch"].strip() for b in detail["diff"]), "diff patch must not be empty"
+    assert any("export const" in b["patch"] for b in detail["diff"])  # the sim executor's content
+
+
+def test_step_detail_unknown_id_returns_404(repo):
+    """260629 (new): GET /steps/{unknown} must 404, not 500."""
+    from app.main import app
+
+    r = TestClient(app).get("/projects/pdiff/steps/does-not-exist")
+    assert r.status_code == 404
+
+
 def test_d11_never_started_ticket_is_not_done(repo):
     """D-11: a ticket that was never planned must report done:false (empty checkpoint
     is 'not started', not 'finished')."""

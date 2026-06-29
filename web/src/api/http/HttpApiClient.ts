@@ -64,9 +64,14 @@ export class HttpApiClient implements ApiClient {
     return info;
   }
 
-  async proposePlan(target: { goal: string } | { ticketId: string }): Promise<PlanProposal> {
-    // existing ticket -> (re)plan it; new goal -> mint a ticket id and create it.
-    const ticketId = 'ticketId' in target ? target.ticketId : `t-${Date.now().toString(36)}`;
+  async proposePlan(
+    target: { goal: string; ticketId?: string } | { ticketId: string },
+  ): Promise<PlanProposal> {
+    // existing ticket -> (re)plan it; new goal -> reuse the caller-supplied stable id (so
+    // re-opening the modal hits the SAME /plan thread instead of minting duplicate tickets),
+    // falling back to a fresh id only if none was provided.
+    const ticketId =
+      'ticketId' in target && target.ticketId ? target.ticketId : `t-${Date.now().toString(36)}`;
     const title = 'goal' in target ? target.goal : undefined;
     const state = await this.post<LifecycleState>(`/tickets/${ticketId}/plan`, { title });
     return { ticketId, steps: state.awaiting?.steps ?? [], title };

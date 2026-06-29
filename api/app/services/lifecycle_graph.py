@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Callable, Optional, TypedDict
 
 from langgraph.graph import END, START, StateGraph
@@ -7,6 +8,8 @@ from langgraph.types import interrupt
 
 from .executor import Executor
 from .planner import Planner
+
+logger = logging.getLogger("asv3.lifecycle.graph")
 
 
 class TicketState(TypedDict, total=False):
@@ -26,7 +29,7 @@ class TicketState(TypedDict, total=False):
 
 # Callback signatures (the API layer injects DB/git-backed implementations):
 StepsApproved = Callable[[list[dict]], None]
-StepCommitted = Callable[[int, str, str, Optional[str]], None]
+StepCommitted = Callable[[int, Optional[str], str, Optional[str], bool], None]
 CommitFn = Callable[[str, str], str]              # (repo_dir, message) -> sha
 BuildPrompt = Callable[[TicketState, dict], str]  # (state, step) -> prompt
 
@@ -35,7 +38,7 @@ def _noop_steps(steps: list[dict]) -> None:  # pragma: no cover - trivial defaul
     return None
 
 
-def _noop_committed(i: int, sha: str, summary: str, decision: Optional[str]) -> None:  # pragma: no cover
+def _noop_committed(i: int, sha, summary: str, decision: Optional[str], ok: bool = True) -> None:  # pragma: no cover
     return None
 
 
@@ -92,8 +95,13 @@ def build_graph(
         step = state["steps"][i]
         prompt = build_prompt(state, step) if build_prompt else step.get("intent", "")
         res = executor.run(state["repo_dir"], prompt)
+        logger.info(
+            "execute_step %d (%s): ok=%s repo=%s%s",
+            i + 1, step.get("label", ""), res.ok, state["repo_dir"],
+            "" if res.ok else f" — executor failed: {(res.output or '')[-300:]}",
+        )
         sha = commit_fn(state["repo_dir"], f"step {i + 1}: {step.get('label', '')}")
-        on_step_committed(i, sha, res.summary, res.decision)
+        on_step_committed(i, sha, res.summary, res.decision, res.ok)
         decisions = list(state.get("decisions", []))
         if res.decision:
             decisions.append(res.decision)

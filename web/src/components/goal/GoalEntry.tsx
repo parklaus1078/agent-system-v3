@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { TargetIcon, ArrowRightIcon, XIcon } from '../icons';
 import './GoalEntry.css';
 
@@ -12,6 +12,13 @@ export function GoalEntry({
 }) {
   const [goal, setGoal] = useState('');
   const trimmed = goal.trim();
+  // Guard against double-submit (button + Cmd/Ctrl+Enter firing twice).
+  const submitted = useRef(false);
+  const submit = () => {
+    if (submitted.current || !trimmed) return;
+    submitted.current = true;
+    onSubmit(trimmed);
+  };
 
   return (
     <div className="goal">
@@ -35,14 +42,14 @@ export function GoalEntry({
         autoFocus
         onChange={(e) => setGoal(e.target.value)}
         onKeyDown={(e) => {
-          if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && trimmed) onSubmit(trimmed);
+          if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') submit();
         }}
       />
       <footer className="goal__foot">
         <button className="btn btn--ghost" onClick={onCancel}>
           취소
         </button>
-        <button className="btn btn--primary" disabled={!trimmed} onClick={() => onSubmit(trimmed)}>
+        <button className="btn btn--primary" disabled={!trimmed} onClick={submit}>
           분해 시작
           <ArrowRightIcon size={15} />
         </button>

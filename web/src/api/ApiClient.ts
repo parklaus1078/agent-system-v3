@@ -9,7 +9,7 @@ export interface ApiClient {
   /** Start the planning lifecycle and return the proposed (editable) steps —
    *  for a brand-new goal, or to (re)plan an existing planning ticket. The
    *  returned `ticketId` is the one to pass back to approvePlan. */
-  proposePlan(target: { goal: string } | { ticketId: string }): Promise<PlanProposal>;
+  proposePlan(target: { goal: string; ticketId?: string } | { ticketId: string }): Promise<PlanProposal>;
   approvePlan(proposal: PlanProposal): Promise<void>;
   reviewStep(stepId: string, action: ReviewAction): Promise<void>;
   owningPath(nodeId: string): Promise<string[]>; // node ids from CodeRegion up to Objective

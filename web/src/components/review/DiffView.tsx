@@ -12,11 +12,18 @@ interface Row {
   cls: 'add' | 'del' | 'ctx';
 }
 
+// git/unidiff file headers that aren't +/-/@@ — drop them so they don't render as context
+const GIT_HEADER =
+  /^(diff --git |index |new file mode |deleted file mode |old mode |new mode |similarity index |dissimilarity index |rename (from|to) |copy (from|to) |Binary files )/;
+
 function toRows(patch: string): Row[] {
   return patch
     .replace(/\n$/, '')
     .split('\n')
-    .filter((l) => !l.startsWith('+++') && !l.startsWith('---') && !l.startsWith('@@'))
+    .filter(
+      (l) =>
+        !l.startsWith('+++') && !l.startsWith('---') && !l.startsWith('@@') && !GIT_HEADER.test(l),
+    )
     .map((line, i) => ({
       line,
       num: i + 1,

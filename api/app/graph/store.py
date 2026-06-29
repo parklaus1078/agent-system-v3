@@ -79,16 +79,27 @@ def approve_plan(
         objective = db.scalars(
             select(Node).where(Node.project_id == project_id, Node.kind == "objective")
         ).first()
-        if objective is not None:
-            db.add(
-                Edge(
-                    id=f"has-{objective.id}-{ticket_id}",
-                    project_id=project_id,
-                    src=objective.id,
-                    dst=ticket_id,
-                    kind="has",
-                )
+        if objective is None:
+            # A project started from a bare goal has no Objective yet — create one (the
+            # project root) so ProjectsHome shows the project and the ticket has a parent.
+            objective = Node(
+                id=f"{project_id}-obj",
+                project_id=project_id,
+                kind="objective",
+                label=title or project_id,
+                data={},
             )
+            db.add(objective)
+            db.flush()
+        db.add(
+            Edge(
+                id=f"has-{objective.id}-{ticket_id}",
+                project_id=project_id,
+                src=objective.id,
+                dst=ticket_id,
+                kind="has",
+            )
+        )
         db.flush()
 
     has_edges = db.scalars(
@@ -119,10 +130,17 @@ def approve_plan(
 
 def step_detail(db: Session, project_id: str, step_id: str) -> dict:
     node = db.get(Node, step_id)
+    if node is None:  # stale/deleted step id (e.g. a re-planned ticket) -> 404, not a 500
+        return {"node": None, "diff": [], "decision": None, "acceptance": [],
+                "createdNodeIds": [], "createdEdgeIds": []}
     touched = [n for n in neighbors(db, project_id, step_id, "out") if n.kind == "code_region"]
     decision = next(
         (n.label for n in neighbors(db, project_id, step_id, "out") if n.kind == "decision"), None
     )
+    # Prefer the real per-file patches captured at commit time (stored on the step node);
+    # fall back to the touched-file paths with empty patches (seeded/legacy steps).
+    stored = (node.data or {}).get("diff")
+    diff = stored if stored else [{"path": c.label, "patch": ""} for c in touched]
     return {
         "node": {
             "id": node.id,
@@ -131,7 +149,7 @@ def step_detail(db: Session, project_id: str, step_id: str) -> dict:
             "status": node.status,
             "data": node.data,
         },
-        "diff": [{"path": c.label, "patch": ""} for c in touched],
+        "diff": diff,
         "decision": decision,
         "acceptance": [{"text": f"{node.label} 확인", "met": node.status == "done"}],
         "createdNodeIds": [c.id for c in touched],

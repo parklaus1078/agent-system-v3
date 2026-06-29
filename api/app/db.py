@@ -58,6 +58,7 @@ def _libpq_url(url: str) -> str:
 
 
 _CHECKPOINTER = None
+_PG_CONN = None  # long-lived Postgres connection kept alive for the process lifetime
 
 
 def make_checkpointer():
@@ -68,7 +69,7 @@ def make_checkpointer():
     across restarts), or `auto` (postgres iff DATABASE_URL is Postgres). PostgresSaver
     is imported lazily and falls back to MemorySaver if it can't connect, so a missing
     libpq/psycopg or DB never takes the API down."""
-    global _CHECKPOINTER
+    global _CHECKPOINTER, _PG_CONN
     if _CHECKPOINTER is not None:
         return _CHECKPOINTER
     mode = os.getenv("ASV3_CHECKPOINTER", "auto")
@@ -76,10 +77,23 @@ def make_checkpointer():
     if use_pg:
         try:
             from langgraph.checkpoint.postgres import PostgresSaver
+            from psycopg import Connection
+            from psycopg.rows import dict_row
 
-            cp = PostgresSaver.from_conn_string(_libpq_url(DATABASE_URL)).__enter__()
+            # Open a LONG-LIVED connection and keep a module reference to it. Do NOT use
+            # PostgresSaver.from_conn_string(...).__enter__(): that returns a context
+            # manager which, once unreferenced, is garbage-collected and CLOSES the
+            # connection — causing "the connection is closed" at setup()/first use.
+            _PG_CONN = Connection.connect(
+                _libpq_url(DATABASE_URL),
+                autocommit=True,        # required by PostgresSaver
+                prepare_threshold=0,
+                row_factory=dict_row,
+            )
+            cp = PostgresSaver(_PG_CONN)
             cp.setup()
             _CHECKPOINTER = cp
+            logger.info("checkpointer: PostgresSaver (durable)")
             return _CHECKPOINTER
         except Exception:  # libpq/psycopg/DB missing -> degrade, don't crash the API
             logger.exception("PostgresSaver unavailable; using in-memory checkpointer")

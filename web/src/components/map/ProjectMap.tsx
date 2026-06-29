@@ -30,6 +30,8 @@ const ROW_TICKET = 150;
 const ROW_DECISION = 290;
 const ROW_CODE = 384;
 const CODE_STEP = 44;
+const ROW_STEP = 250; // step nodes sit just below their ticket when the Step layer is on
+const STEP_GAP = 30;
 
 const EDGE_STYLE: Record<EdgeKind, React.CSSProperties> = {
   has: { stroke: '#c4cad4', strokeWidth: 1.5 },
@@ -84,6 +86,7 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
   const selectTicket = useStore((s) => s.selectTicket);
   const editPlan = useStore((s) => s.editPlan);
   const [showCode, setShowCode] = useState(false);
+  const [showSteps, setShowSteps] = useState(false);
 
   const active = !!highlightIds && highlightIds.length > 0;
   const dim = (id: string) => (active ? !highlightIds!.includes(id) : false);
@@ -104,6 +107,7 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
     const tickets = graph.nodes.filter((n) => n.kind === 'ticket');
     const decisions = graph.nodes.filter((n) => n.kind === 'decision');
     const codes = graph.nodes.filter((n) => n.kind === 'code_region' || n.kind === 'test');
+    const stepNodes = showSteps ? graph.nodes.filter((n) => n.kind === 'step') : [];
 
     // layered positions
     const pos = new Map<string, { x: number; y: number }>();
@@ -114,18 +118,34 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
     tickets.forEach((t, i) => pos.set(t.id, { x: startX + i * col, y: ROW_TICKET }));
     if (objective) pos.set(objective.id, { x: -OBJ_W / 2, y: 0 });
 
+    // steps stacked under their owning ticket (Step layer); the rows below shift down by
+    // the tallest ticket's step block so nothing overlaps.
+    const stepsByOwner = new Map<string, GraphNode[]>();
+    for (const s of stepNodes) {
+      const owner = ownerTicketId(graph, s.id);
+      if (!owner) continue;
+      (stepsByOwner.get(owner) ?? stepsByOwner.set(owner, []).get(owner)!).push(s);
+    }
+    const maxSteps = [...stepsByOwner.values()].reduce((m, a) => Math.max(m, a.length), 0);
+    const stepBlockH = showSteps ? maxSteps * STEP_GAP + 16 : 0;
+    stepsByOwner.forEach((arr, owner) =>
+      arr.forEach((s, i) =>
+        pos.set(s.id, { x: centerOf(owner) - TICKET_W / 2, y: ROW_STEP + i * STEP_GAP }),
+      ),
+    );
+
     const ticketHasDecision = new Set(
       decisions.map((d) => ownerTicketId(graph, d.id)).filter(Boolean) as string[],
     );
     decisions.forEach((d) => {
       const owner = ownerTicketId(graph, d.id);
-      pos.set(d.id, { x: (owner ? centerOf(owner) : 0) - 118, y: ROW_DECISION });
+      pos.set(d.id, { x: (owner ? centerOf(owner) : 0) - 118, y: ROW_DECISION + stepBlockH });
     });
     // code/test stacked below their owner ticket (only matters when showCode)
     const codeIdxByOwner = new Map<string, number>();
     codes.forEach((c) => {
       const owner = ownerTicketId(graph, c.id);
-      const baseY = owner && ticketHasDecision.has(owner) ? ROW_CODE : ROW_DECISION;
+      const baseY = (owner && ticketHasDecision.has(owner) ? ROW_CODE : ROW_DECISION) + stepBlockH;
       const idx = codeIdxByOwner.get(owner ?? '') ?? 0;
       codeIdxByOwner.set(owner ?? '', idx + 1);
       pos.set(c.id, { x: (owner ? centerOf(owner) : 0) - CODE_W / 2, y: baseY + idx * CODE_STEP });
@@ -134,6 +154,7 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
     const visible = new Set<string>();
     if (objective) visible.add(objective.id);
     tickets.forEach((t) => visible.add(t.id));
+    stepNodes.forEach((s) => { if (pos.has(s.id)) visible.add(s.id); });
     decisions.forEach((d) => visible.add(d.id));
     if (effectiveShowCode) codes.forEach((c) => visible.add(c.id));
 
@@ -164,6 +185,24 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
         },
         draggable: false,
         selectable: true, // tickets receive pointer events (others stay inert)
+      });
+    });
+    stepNodes.forEach((s) => {
+      if (!pos.has(s.id)) return;
+      const owner = ownerTicketId(graph, s.id);
+      const idx = owner ? (stepsByOwner.get(owner) ?? []).findIndex((x) => x.id === s.id) : 0;
+      rfNodes.push({
+        id: s.id,
+        type: 'step',
+        position: pos.get(s.id)!,
+        data: {
+          label: s.label,
+          status: (s.status ?? 'planning') as Status,
+          index: idx + 1,
+          dimmed: dim(s.id),
+        },
+        draggable: false,
+        selectable: false,
       });
     });
     decisions.forEach((d) =>
@@ -203,7 +242,10 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
     const rep = (id: string): string | null => {
       const node = graph.nodes.find((n) => n.id === id);
       if (!node) return null;
-      return node.kind === 'step' ? ownerTicketId(graph, id) : id;
+      // keep step nodes as-is when the Step layer renders them (so ticket→step and
+      // step→code edges keep real attribution); otherwise collapse them onto the ticket.
+      if (node.kind === 'step') return showSteps && pos.has(id) ? id : ownerTicketId(graph, id);
+      return id;
     };
     const rfEdges: Edge[] = [];
     const seen = new Set<string>();
@@ -237,7 +279,7 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
     }
 
     return { nodes: rfNodes, edges: rfEdges, banner: bannerTag };
-  }, [graph, effectiveShowCode, highlightIds]);
+  }, [graph, effectiveShowCode, showSteps, highlightIds]);
 
   return (
     <ReactFlow
@@ -263,6 +305,14 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
       <Background variant={BackgroundVariant.Dots} gap={23} size={1.6} color="#ccd3dd" />
       <Panel position="top-left">
         <div className="map-controls">
+          <button
+            className="map-toggle"
+            aria-pressed={showSteps}
+            onClick={() => setShowSteps((v) => !v)}
+          >
+            <LayersIcon size={15} />
+            Step 레이어
+          </button>
           <button
             className="map-toggle"
             aria-pressed={effectiveShowCode}

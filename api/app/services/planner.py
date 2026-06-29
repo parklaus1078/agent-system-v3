@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 import subprocess
+import time
 from typing import Protocol
 
 from ..schemas_plan import StepSpec, PlanProposal
+
+logger = logging.getLogger("asv3.planner")
 
 
 class Planner(Protocol):
@@ -78,11 +82,21 @@ class CliPlanner:
             f"Objective: {objective}\nTicket: {ticket_title}\n"
             + (f"Context:\n{context}\n" if context else "")
         )
+        logger.info(
+            "planner[%s] spawn: model=%s objective=%r ticket=%r prompt=%dch",
+            self.brain, self.model, objective[:60], ticket_title[:60], len(prompt),
+        )
+        t0 = time.monotonic()
         proc = subprocess.run(  # noqa: S603
             ["claude", "-p", prompt, "--model", self.model],
             capture_output=True,
             text=True,
         )
+        ms = int((time.monotonic() - t0) * 1000)
+        logger.info("planner[%s] exit: rc=%d %dms out=%dch", self.brain, proc.returncode, ms, len(proc.stdout or ""))
         if proc.returncode != 0:
+            logger.warning("planner[%s] stderr: %s", self.brain, (proc.stderr or "")[-400:])
             raise RuntimeError(f"claude planner failed (exit {proc.returncode}): {proc.stderr[:300]}")
-        return self._parse(proc.stdout)
+        steps = self._parse(proc.stdout)
+        logger.info("planner[%s] proposed %d steps", self.brain, len(steps))
+        return steps

@@ -30,7 +30,7 @@ def test_plan_approve_then_review_each_step(tmp_path):
         executor=ex,
         checkpointer=MemorySaver(),
         on_steps_approved=lambda steps: None,
-        on_step_committed=lambda i, sha, summary, decision: committed.append((i, summary)),
+        on_step_committed=lambda i, sha, summary, decision, ok=True: committed.append((i, summary)),
         commit_fn=_commit,
     )
     cfg = {"configurable": {"thread_id": "ticket:1"}}
@@ -71,7 +71,7 @@ def test_changes_reruns_same_step(tmp_path):
         planner=SimulatedPlanner(),
         executor=ex,
         checkpointer=MemorySaver(),
-        on_step_committed=lambda i, sha, summary, decision: committed.append(i),
+        on_step_committed=lambda i, sha, summary, decision, ok=True: committed.append(i),
         commit_fn=_commit,
     )
     cfg = {"configurable": {"thread_id": "ticket:2"}}

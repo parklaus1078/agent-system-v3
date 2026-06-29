@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from ..db import get_session, make_checkpointer
 from ..graph import store
-from ..graph.diff_ingest import apply_step_diff
+from ..graph.diff_ingest import apply_step_diff, parse_diff
 from ..git.repo import commit_all, diff_of_commit
 from ..models import Node, Edge
 from ..schemas import (
@@ -67,7 +67,7 @@ def _resolve_repo_path(db: Session, pid: str) -> tuple[str, str]:
     Precedence:
       1) the Objective's data.repo_dir          (explicit per-project override)
       2) $ASV3_WORKSPACE_DIR/{project_id}        (workspace root -> one repo per project)
-      3) $ASV3_TARGET_REPO_DIR                   (legacy single global repo; back-compat)
+      3) $ASV3_TARGET_REPO_DIR/{project_id}      (deprecated alias of the workspace root)
       4) <api>/.asv3-workspace/{project_id}      (default workspace)"""
     obj = _objective(db, pid)
     override = (obj.data or {}).get("repo_dir") if obj else None
@@ -78,7 +78,9 @@ def _resolve_repo_path(db: Session, pid: str) -> tuple[str, str]:
     if workspace:
         return os.path.join(workspace, pid), "workspace"
     if legacy:
-        return legacy, "legacy"
+        # ASV3_TARGET_REPO_DIR is a deprecated ALIAS of the workspace root: it too is a
+        # PER-PROJECT root ({root}/{pid}), not a single repo shared by all projects.
+        return os.path.join(legacy, pid), "legacy"
     return str(_DEFAULT_WORKSPACE / pid), "default"
 
 
@@ -149,18 +151,29 @@ def _build(db: Session, pid: str, tid: str, title: str | None = None):
     def on_steps_approved(steps: list[dict]) -> None:
         store.approve_plan(db, pid, tid, [s["label"] for s in steps], title)
 
-    def on_step_committed(i: int, sha: str | None, summary: str, decision: str | None) -> None:
+    def on_step_committed(
+        i: int, sha: str | None, summary: str, decision: str | None, ok: bool = True
+    ) -> None:
         sid = f"{tid}-s{i + 1}"
+        diff_blobs: list[dict] = []
         if sha:  # None => executor made no edits; still gate the step, just no diff
             try:
-                apply_step_diff(db, pid, sid, sha, diff_of_commit(_repo_dir(db, pid), sha))
+                diff_text = diff_of_commit(_repo_dir(db, pid), sha)
+                apply_step_diff(db, pid, sid, sha, diff_text)
+                # store the per-file patch ON THE STEP node so the review pane renders the
+                # real diff (was: step_detail returned patch="" — empty diff view).
+                diff_blobs = [{"path": tf.path, "patch": tf.patch} for tf in parse_diff(diff_text)]
             except Exception:  # git/diff failure must not strand the step un-gated
                 db.rollback()  # discard any partial ingest; the status update below still lands
                 logger.exception("diff ingest failed for step %s (commit %s)", sid, sha)
         node = db.get(Node, sid)
         if node is not None:
-            node.status = "awaiting_review"
-            node.data = {**(node.data or {}), "summary": summary}
+            # a failed/no-op executor must NOT masquerade as a clean awaiting_review gate
+            node.status = "awaiting_review" if ok else "blocked"
+            node.data = {**(node.data or {}), "summary": summary, "diff": diff_blobs, "ok": ok}
+        logger.info(
+            "step committed: %s ok=%s sha=%s files=%d", sid, ok, (sha or "-")[:8], len(diff_blobs)
+        )
         if decision:
             did = f"dec:{sid}"
             existing = db.get(Node, did)
@@ -240,22 +253,20 @@ def start_plan(pid: str, tid: str, body: PlanStartIn, db: Session = Depends(get_
     obj = _objective(db, pid)
     existing = db.get(Node, tid)
     title = body.title or (existing.label if existing else tid)
-    if existing is None:
-        db.add(
-            Node(id=tid, project_id=pid, kind="ticket", label=title, status="planning", data={})
-        )
-        if obj is not None:
-            db.add(
-                Edge(id=f"has-{obj.id}-{tid}", project_id=pid, src=obj.id, dst=tid, kind="has")
-            )
-        db.commit()
+    # Do NOT persist the ticket here. The proposed plan lives in the LangGraph checkpoint
+    # (thread_id ticket:{tid}); store.approve_plan creates the ticket (and the project's
+    # Objective if missing) only on approval. So an abandoned or re-opened propose leaves
+    # NO orphan/duplicate ticket on the map (was: a ticket committed per propose call).
+    logger.info("start_plan: mode=%s pid=%s tid=%s title=%r", _mode(), pid, tid, title)
 
     graph.invoke(
         {
             "project_id": pid,
             "ticket_id": tid,
             "repo_dir": _repo_dir(db, pid),
-            "objective": obj.label if obj else "",
+            # use the goal text as the objective when the project has no Objective yet, so
+            # the planner + step prompts still receive the project goal (not an empty "").
+            "objective": obj.label if obj else title,
             "ticket_title": title,
             # re-planning an existing ticket seeds the proposal from its current steps so
             # the plan is revised, not silently replaced with a generic 3-step template.
@@ -271,12 +282,18 @@ def start_plan(pid: str, tid: str, body: PlanStartIn, db: Session = Depends(get_
 
 @router.post("/tickets/{tid}/plan/approve", response_model=LifecycleStateOut)
 def approve_plan(pid: str, tid: str, body: PlanApproveIn, db: Session = Depends(get_session)):
+    logger.info("approve_plan: pid=%s tid=%s steps=%d", pid, tid, len(body.steps or []))
     graph = _build(db, pid, tid, title=body.title)
     cfg = _cfg(tid)
     snap = graph.get_state(cfg)
     awaiting = _awaiting(snap)
     if not (awaiting and awaiting.get("type") == "plan_approval"):
         raise HTTPException(409, "no plan awaiting approval; call /plan first")
+    # The goal/title was supplied at propose time and lives in the checkpoint; use it (over
+    # the usually-absent approve-body title) so the ticket/Objective get the real goal label.
+    title = body.title or (snap.values or {}).get("ticket_title")
+    if title != body.title:
+        graph = _build(db, pid, tid, title=title)  # rebuild so on_steps_approved uses it
     resume = {"approve": True}
     if body.steps is not None:
         resume["steps"] = [s.model_dump() for s in body.steps]
@@ -317,6 +334,7 @@ def _review_db_direct(db: Session, pid: str, tid: str, sid: str, action: ReviewA
 
 @router.post("/steps/{sid}/review", response_model=LifecycleStateOut)
 def review_step(pid: str, sid: str, action: ReviewActionIn, db: Session = Depends(get_session)):
+    logger.info("review_step: pid=%s sid=%s kind=%s", pid, sid, action.kind)
     tid = _ticket_of_step(db, pid, sid)
     graph = _build(db, pid, tid)
     cfg = _cfg(tid)

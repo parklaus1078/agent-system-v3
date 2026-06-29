@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from ..db import get_session
@@ -24,7 +24,10 @@ def get_graph(pid: str, db: Session = Depends(get_session)):
 
 @router.get("/steps/{sid}", response_model=StepDetailOut)
 def step_detail(pid: str, sid: str, db: Session = Depends(get_session)):
-    return store.step_detail(db, pid, sid)
+    detail = store.step_detail(db, pid, sid)
+    if detail["node"] is None:  # unknown/stale step id -> 404 (was an unguarded 500)
+        raise HTTPException(404, "step not found")
+    return detail
 
 
 @router.get("/owning-path/{nid:path}")
