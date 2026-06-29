@@ -1,0 +1,7 @@
+[     126ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://127.0.0.1:5180/node_modules/.vite/deps/chunk-XPR23Y44.js?v=f957d4dc:21548
+[  280629ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:8011/projects/p1/graph:0
+[  280630ms] TypeError: Failed to fetch
+    at HttpApiClient.j (http://127.0.0.1:5180/src/api/http/HttpApiClient.ts?t=1782697997401:11:21)
+    at HttpApiClient.getGraph (http://127.0.0.1:5180/src/api/http/HttpApiClient.ts?t=1782697997401:28:17)
+    at Object.load (http://127.0.0.1:5180/src/store/useStore.ts?t=1782697997401:23:46)
+    at http://127.0.0.1:5180/src/store/useStore.ts?t=1782697997401:14:16

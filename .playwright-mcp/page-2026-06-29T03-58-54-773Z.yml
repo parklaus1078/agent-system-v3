@@ -1,0 +1,96 @@
+- generic [ref=e4]:
+  - banner [ref=e5]:
+    - generic [ref=e6] [cursor=pointer]:
+      - generic [ref=e7]: CT
+      - generic [ref=e8]: Control Tower
+    - navigation [ref=e10]:
+      - generic [ref=e11] [cursor=pointer]: Mobile Todo
+      - generic [ref=e111]: /
+      - generic [ref=e112] [cursor=pointer]: SUBS
+      - generic [ref=e113] [cursor=pointer]: Subscription plans
+    - generic [ref=e13]:
+      - img [ref=e14]
+      - 'textbox "추적: 파일 · 심볼 · UI 요소 → useEntitlement.ts" [ref=e17]':
+        - /placeholder: "추적: 파일 · 심볼 · UI 요소  →  useEntitlement.ts"
+        - text: useEntitlement.ts
+    - generic [ref=e18]:
+      - generic [ref=e20]: live
+      - generic [ref=e21]: 12:58:54
+    - generic [ref=e22]:
+      - button "Navigator" [ref=e23] [cursor=pointer]
+      - button "Cockpit" [ref=e24] [cursor=pointer]
+    - button "Legend" [ref=e25] [cursor=pointer]:
+      - img [ref=e26]
+      - text: Legend
+  - main [ref=e31]:
+    - generic [ref=e114]:
+      - generic [ref=e115]:
+        - button "지도" [ref=e116] [cursor=pointer]:
+          - img [ref=e117]
+          - text: 지도
+        - generic [ref=e119]: SUBS
+        - generic [ref=e120]: Subscription plans
+        - generic [ref=e123]: awaiting review
+        - generic [ref=e127]: 3 / 7
+        - generic [ref=e129]: 리뷰 대기 step이 당신을 기다립니다
+      - generic [ref=e131]:
+        - generic [ref=e132]:
+          - generic [ref=e133]:
+            - generic [ref=e134]: Planned
+            - generic [ref=e135]: "3"
+          - generic [ref=e136] [cursor=pointer]:
+            - generic [ref=e137]:
+              - generic [ref=e139]: "05"
+              - generic [ref=e142]: planned
+            - generic [ref=e143]: Restore purchases
+          - generic [ref=e144] [cursor=pointer]:
+            - generic [ref=e145]:
+              - generic [ref=e147]: "06"
+              - generic [ref=e150]: planned
+            - generic [ref=e151]: Proration on upgrade / downgrade
+          - generic [ref=e152] [cursor=pointer]:
+            - generic [ref=e153]:
+              - generic [ref=e155]: "07"
+              - generic [ref=e158]: planned
+            - generic [ref=e159]: Receipt validation tests
+        - generic [ref=e160]:
+          - generic [ref=e161]:
+            - generic [ref=e162]: Executing
+            - generic [ref=e163]: "0"
+          - generic [ref=e164]:
+            - generic [ref=e165]:
+              - img [ref=e166]
+              - text: 정지됨
+            - generic [ref=e169]: step 04 리뷰가 끝나면 다음 step이 자동 실행됩니다.
+        - generic [ref=e170]:
+          - generic [ref=e171]:
+            - generic [ref=e173]: Awaiting review
+            - generic [ref=e174]: "1"
+          - generic [ref=e175] [cursor=pointer]:
+            - generic [ref=e176]:
+              - generic [ref=e177]: step 04
+              - generic [ref=e180]: awaiting review
+            - generic [ref=e181]: Entitlement check & feature gating
+            - generic [ref=e182]:
+              - img [ref=e183]
+              - text: touches
+              - generic [ref=e186]: useEntitlement.ts +2
+            - generic [ref=e187]:
+              - generic [ref=e188]: 리뷰 시작
+              - img [ref=e189]
+        - generic [ref=e191]:
+          - generic [ref=e192]:
+            - generic [ref=e193]: Done
+            - generic [ref=e194]: "3"
+          - generic [ref=e196] [cursor=pointer]:
+            - generic [ref=e197]: "01"
+            - generic [ref=e198]: Plan schema & tiers (Free / Pro / Team)
+            - img [ref=e199]
+          - generic [ref=e202] [cursor=pointer]:
+            - generic [ref=e203]: "02"
+            - generic [ref=e204]: Plan selection UI
+            - img [ref=e205]
+          - generic [ref=e208] [cursor=pointer]:
+            - generic [ref=e209]: "03"
+            - generic [ref=e210]: Purchase flow (RevenueCat)
+            - img [ref=e211]

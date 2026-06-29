@@ -1,0 +1,36 @@
+- generic [ref=e3]:
+  - heading "LLM Dev Control Tower" [level=1] [ref=e4]
+  - banner [ref=e5]:
+    - generic [ref=e6]:
+      - button "프로젝트 목록" [ref=e7] [cursor=pointer]:
+        - generic [ref=e8]: CT
+        - generic [ref=e9]: Control Tower
+      - button "구독 할일앱" [ref=e11] [cursor=pointer]
+    - generic [ref=e13]:
+      - generic:
+        - img
+      - searchbox "추적" [ref=e14]
+    - generic [ref=e15]:
+      - generic [ref=e16]:
+        - generic [ref=e18]: live
+        - generic [ref=e19]: 00:00:00
+      - group "altitude" [ref=e20]:
+        - button "Navigator" [pressed] [ref=e21] [cursor=pointer]
+        - button "Cockpit" [ref=e22] [cursor=pointer]
+      - button "Legend" [ref=e23] [cursor=pointer]:
+        - img [ref=e24]
+        - text: Legend
+  - main [ref=e29]:
+    - application [ref=e30]:
+      - img
+      - generic [ref=e34]:
+        - button "CodeRegion 레이어" [ref=e35] [cursor=pointer]:
+          - img [ref=e36]
+          - text: CodeRegion 레이어
+        - generic [ref=e39]:
+          - text: 지금
+          - generic [ref=e41]: GATE
+          - text: 가 당신의 리뷰를 기다리는 중
+      - button "목표 · 티켓" [ref=e43] [cursor=pointer]:
+        - img [ref=e44]
+        - text: 목표 · 티켓

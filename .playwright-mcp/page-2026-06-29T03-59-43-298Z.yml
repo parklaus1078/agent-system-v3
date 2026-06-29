@@ -1,0 +1,143 @@
+- generic [ref=e4]:
+  - banner [ref=e5]:
+    - generic [ref=e6] [cursor=pointer]:
+      - generic [ref=e7]: CT
+      - generic [ref=e8]: Control Tower
+    - navigation [ref=e10]:
+      - generic [ref=e11] [cursor=pointer]: Mobile Todo
+      - generic [ref=e111]: /
+      - generic [ref=e112] [cursor=pointer]: SUBS
+      - generic [ref=e113] [cursor=pointer]: Subscription plans
+    - generic [ref=e13]:
+      - img [ref=e14]
+      - 'textbox "추적: 파일 · 심볼 · UI 요소 → useEntitlement.ts" [ref=e17]':
+        - /placeholder: "추적: 파일 · 심볼 · UI 요소  →  useEntitlement.ts"
+        - text: useEntitlement.ts
+    - generic [ref=e18]:
+      - generic [ref=e20]: live
+      - generic [ref=e21]: 12:59:42
+    - generic [ref=e22]:
+      - button "Navigator" [ref=e23] [cursor=pointer]
+      - button "Cockpit" [active] [ref=e24] [cursor=pointer]
+    - button "Legend" [ref=e25] [cursor=pointer]:
+      - img [ref=e26]
+      - text: Legend
+  - main [ref=e31]:
+    - generic [ref=e213]:
+      - generic [ref=e214]:
+        - generic [ref=e215]:
+          - img [ref=e216]
+          - generic [ref=e219]: Project Map
+        - generic [ref=e220]:
+          - generic [ref=e221]:
+            - generic [ref=e222]:
+              - img [ref=e223]
+              - generic [ref=e226]: OBJECTIVE
+            - generic [ref=e228]: Mobile Todo — tiers
+          - generic [ref=e229]:
+            - generic [ref=e230] [cursor=pointer]:
+              - generic [ref=e231]:
+                - generic [ref=e233]: AUTH
+                - generic [ref=e234]: Auth & accounts
+              - generic [ref=e239]: done
+            - generic [ref=e240] [cursor=pointer]:
+              - generic [ref=e241]:
+                - generic [ref=e243]: CRUD
+                - generic [ref=e244]: Todo CRUD + lists
+              - generic [ref=e249]: done
+            - generic [ref=e250] [cursor=pointer]:
+              - generic [ref=e251]:
+                - generic [ref=e253]: SUBS
+                - generic [ref=e254]: Subscription plans
+              - generic [ref=e259]: awaiting review
+            - generic [ref=e260] [cursor=pointer]:
+              - generic [ref=e261]:
+                - generic [ref=e263]: GATE
+                - generic [ref=e264]: Paywall & feature gating
+              - generic [ref=e268]: planning
+            - generic [ref=e269] [cursor=pointer]:
+              - generic [ref=e270]:
+                - generic [ref=e272]: SYNC
+                - generic [ref=e273]: Offline sync
+              - generic [ref=e278]: blocked
+      - generic [ref=e279]:
+        - generic [ref=e280]:
+          - generic [ref=e281]: SUBS
+          - generic [ref=e282]: Subscription plans
+          - generic [ref=e283]: 3 / 7
+        - generic [ref=e285]:
+          - generic [ref=e286] [cursor=pointer]:
+            - generic [ref=e289]: "01"
+            - generic [ref=e290]:
+              - generic [ref=e291]:
+                - generic [ref=e292]: Plan schema & tiers (Free / Pro / Team)
+                - generic [ref=e295]: done
+              - generic [ref=e296]: touches models/Plan.ts
+          - generic [ref=e297] [cursor=pointer]:
+            - generic [ref=e300]: "02"
+            - generic [ref=e301]:
+              - generic [ref=e302]:
+                - generic [ref=e303]: Plan selection UI
+                - generic [ref=e306]: done
+              - generic [ref=e307]: touches screens/PlansScreen.tsx
+          - generic [ref=e308] [cursor=pointer]:
+            - generic [ref=e311]: "03"
+            - generic [ref=e312]:
+              - generic [ref=e313]:
+                - generic [ref=e314]: Purchase flow (RevenueCat)
+                - generic [ref=e317]: done
+              - generic [ref=e318]: touches services/billing.ts
+          - generic [ref=e319] [cursor=pointer]:
+            - generic [ref=e322]: "04"
+            - generic [ref=e323]:
+              - generic [ref=e324]:
+                - generic [ref=e325]: Entitlement check & feature gating
+                - generic [ref=e328]: awaiting review
+              - generic [ref=e329]: touches useEntitlement.ts +2
+          - generic [ref=e330] [cursor=pointer]:
+            - generic [ref=e333]: "05"
+            - generic [ref=e334]:
+              - generic [ref=e335]:
+                - generic [ref=e336]: Restore purchases
+                - generic [ref=e339]: planned
+              - generic [ref=e340]: touches —
+          - generic [ref=e341] [cursor=pointer]:
+            - generic [ref=e344]: "06"
+            - generic [ref=e345]:
+              - generic [ref=e346]:
+                - generic [ref=e347]: Proration on upgrade / downgrade
+                - generic [ref=e350]: planned
+              - generic [ref=e351]: touches —
+          - generic [ref=e352] [cursor=pointer]:
+            - generic [ref=e355]: "07"
+            - generic [ref=e356]:
+              - generic [ref=e357]:
+                - generic [ref=e358]: Receipt validation tests
+                - generic [ref=e361]: planned
+              - generic [ref=e362]: touches billing.integration.test.ts
+      - generic [ref=e363]:
+        - generic [ref=e364]:
+          - generic [ref=e365]: step 04
+          - generic [ref=e368]: awaiting review
+        - generic [ref=e369]:
+          - generic [ref=e370]: Entitlement check & feature gating
+          - generic [ref=e371]:
+            - generic [ref=e372]:
+              - generic [ref=e373]:
+                - img [ref=e374]
+                - generic [ref=e376]: DECISION
+              - generic [ref=e377]: gate by entitlement flag, not plan name
+            - generic [ref=e378]:
+              - generic [ref=e379]:
+                - generic [ref=e380]: ACCEPTANCE
+                - generic [ref=e381]: 3 / 4
+              - generic [ref=e382]:
+                - generic [ref=e383]: TESTS
+                - generic [ref=e384]: green
+            - generic [ref=e386]:
+              - button "승인" [ref=e387] [cursor=pointer]:
+                - img [ref=e388]
+                - text: 승인
+              - button "전체 리뷰" [ref=e390] [cursor=pointer]:
+                - text: 전체 리뷰
+                - img [ref=e391]

@@ -1,0 +1,116 @@
+- generic [ref=e3]:
+  - heading "LLM Dev Control Tower" [level=1] [ref=e4]
+  - banner [ref=e5]:
+    - generic [ref=e6]:
+      - button "프로젝트 목록" [ref=e7] [cursor=pointer]:
+        - generic [ref=e8]: CT
+        - generic [ref=e9]: Control Tower
+      - button "구독 할일앱" [ref=e43] [cursor=pointer]
+    - generic [ref=e11]:
+      - generic:
+        - img
+      - searchbox "추적" [ref=e12]
+    - generic [ref=e13]:
+      - generic [ref=e14]:
+        - generic [ref=e16]: live
+        - generic [ref=e17]: 00:00:19
+      - group "altitude" [ref=e18]:
+        - button "Navigator" [pressed] [ref=e19] [cursor=pointer]
+        - button "Cockpit" [ref=e20] [cursor=pointer]
+      - button "Legend" [ref=e21] [cursor=pointer]:
+        - img [ref=e22]
+        - text: Legend
+  - main [ref=e27]:
+    - application [ref=e28]:
+      - generic [ref=e30]:
+        - generic:
+          - generic:
+            - img:
+              - group "Edge from obj to t-crud" [ref=e44] [cursor=pointer]
+            - img:
+              - group "Edge from obj to t-gate" [ref=e47] [cursor=pointer]
+            - img:
+              - group "Edge from t-gate to dec"
+            - img:
+              - group "Edge from obj to t-pay" [ref=e50] [cursor=pointer]
+            - img:
+              - group "Edge from obj to t-sync" [ref=e53] [cursor=pointer]
+          - generic:
+            - group [ref=e56]:
+              - generic [ref=e57]:
+                - generic [ref=e58]:
+                  - generic [ref=e59]:
+                    - img [ref=e60]
+                    - text: OBJECTIVE
+                  - generic [ref=e63]: live
+                - generic [ref=e65]: 구독 티어 할일앱
+            - group [ref=e66] [cursor=pointer]:
+              - generic [ref=e67]:
+                - generic [ref=e68]:
+                  - generic [ref=e69]: CRUD
+                  - generic [ref=e70]: done
+                - generic [ref=e72]: 할일 CRUD
+                - generic [ref=e76]: 2 / 2 steps
+            - group [ref=e77] [cursor=pointer]:
+              - generic [ref=e78]:
+                - generic [ref=e79]:
+                  - generic [ref=e80]: GATE
+                  - generic [ref=e81]: review
+                - generic [ref=e83]: 구독 티어 + 기능 게이팅
+                - generic [ref=e86]:
+                  - generic [ref=e87]: 1 / 3 steps
+                  - generic [ref=e88]:
+                    - text: step 02 대기
+                    - img [ref=e89]
+            - group [ref=e91] [cursor=pointer]:
+              - generic [ref=e92]:
+                - generic [ref=e93]:
+                  - generic [ref=e94]: PAY
+                  - generic [ref=e95]: executing
+                - generic [ref=e97]: 페이월 & 업셀
+                - generic [ref=e100]: 0 / 3 steps
+            - group [ref=e101] [cursor=pointer]:
+              - generic [ref=e102]:
+                - generic [ref=e103]:
+                  - generic [ref=e104]: SYNC
+                  - generic [ref=e105]: blocked
+                - generic [ref=e107]: 오프라인 동기화
+                - generic [ref=e110]:
+                  - generic [ref=e111]: 1 / 3 steps
+                  - generic [ref=e112]:
+                    - text: step 02 실패
+                    - img [ref=e113]
+            - group [ref=e115]:
+              - generic [ref=e116]:
+                - generic [ref=e117]:
+                  - img [ref=e118]
+                  - generic [ref=e120]: DECISION
+                - generic [ref=e121]: 게이팅은 플래그로 (티어 분기 금지)
+      - img
+      - generic [ref=e32]:
+        - button "CodeRegion 레이어" [ref=e33] [cursor=pointer]:
+          - img [ref=e34]
+          - text: CodeRegion 레이어
+        - generic [ref=e124]:
+          - text: 지금
+          - generic [ref=e126]: GATE
+          - text: 가 당신의 리뷰를 기다리는 중
+      - button "목표 · 티켓" [ref=e38] [cursor=pointer]:
+        - img [ref=e39]
+        - text: 목표 · 티켓
+    - dialog [ref=e128]:
+      - generic [ref=e129]:
+        - generic [ref=e130]:
+          - generic [ref=e131]:
+            - img [ref=e132]
+            - generic [ref=e135]: 새 목표
+          - button "닫기" [ref=e136] [cursor=pointer]:
+            - img [ref=e137]
+        - paragraph [ref=e139]: 무엇을 만들까요? PLAN 에이전트가 목표를 step으로 분해하고, 승인하면 실행이 시작됩니다.
+        - textbox "목표" [active] [ref=e140]:
+          - /placeholder: "예: 구독 결제 붙이기"
+        - generic [ref=e141]:
+          - button "취소" [ref=e142] [cursor=pointer]
+          - button "분해 시작" [disabled] [ref=e143]:
+            - text: 분해 시작
+            - img [ref=e144]

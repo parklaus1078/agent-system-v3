@@ -1,0 +1,31 @@
+- generic [ref=e304]:
+  - heading "LLM Dev Control Tower" [level=1] [ref=e305]
+  - banner [ref=e306]:
+    - generic [ref=e307]:
+      - generic [ref=e308]: CT
+      - generic [ref=e309]: Control Tower
+    - generic [ref=e310]: local · single-user
+  - main [ref=e311]:
+    - generic [ref=e312]:
+      - heading "새 목표" [level=2] [ref=e313]
+      - generic [ref=e314]:
+        - textbox "새 목표" [ref=e315]:
+          - /placeholder: "거친 목표를 한 줄~문단으로. 예: \"Todo 앱에 Free/Pro/Team 구독 티어와 기능 게이팅을 붙인다.\""
+        - generic [ref=e316]:
+          - generic [ref=e317]: PLAN 에이전트가 step으로 분해 → 승인 후 실행
+          - button "분해 시작" [ref=e318] [cursor=pointer]:
+            - text: 분해 시작
+            - img [ref=e319]
+    - generic [ref=e321]:
+      - heading "진행 중인 프로젝트" [level=2] [ref=e322]
+      - button "구독 티어 할일앱 4 tickets · 10 steps 1건 리뷰 대기 Free / Pro / Team 구독 티어와 기능 게이팅을 갖춘 할 일 관리 앱 CRUD GATE PAY SYNC" [ref=e323] [cursor=pointer]:
+        - generic [ref=e324]:
+          - generic [ref=e325]: 구독 티어 할일앱
+          - generic [ref=e326]: 4 tickets · 10 steps
+          - generic [ref=e327]: 1건 리뷰 대기
+        - paragraph [ref=e329]: Free / Pro / Team 구독 티어와 기능 게이팅을 갖춘 할 일 관리 앱
+        - generic [ref=e330]:
+          - generic [ref=e333]: CRUD
+          - generic [ref=e336]: GATE
+          - generic [ref=e339]: PAY
+          - generic [ref=e342]: SYNC

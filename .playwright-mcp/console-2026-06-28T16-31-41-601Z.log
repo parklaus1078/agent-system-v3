@@ -1,0 +1,67 @@
+[     345ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://127.0.0.1:5179/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5fa2753c:21548
+[     369ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://127.0.0.1:5179/node_modules/.vite/deps/chunk-XPR23Y44.js?v=f957d4dc:21548
+[     383ms] [ERROR] Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem. @ http://127.0.0.1:5179/node_modules/.vite/deps/chunk-I4MZPW7S.js?v=f957d4dc:157
+[     383ms] [ERROR] Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem. @ http://127.0.0.1:5179/node_modules/.vite/deps/chunk-I4MZPW7S.js?v=f957d4dc:157
+[     391ms] TypeError: Cannot read properties of null (reading 'useState')
+    at useState (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-I4MZPW7S.js?v=f957d4dc:1088:29)
+    at ReactFlowProvider (http://127.0.0.1:5179/node_modules/.vite/deps/@xyflow_react.js?v=c293d998:8992:46)
+    at renderWithHooks (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5fa2753c:11546:26)
+    at mountIndeterminateComponent (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5fa2753c:14924:21)
+    at beginWork (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5fa2753c:15912:22)
+    at HTMLUnknownElement.callCallback2 (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5fa2753c:3672:22)
+    at Object.invokeGuardedCallbackDev (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5fa2753c:3697:24)
+    at invokeGuardedCallback (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5fa2753c:3731:39)
+    at beginWork$1 (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5fa2753c:19763:15)
+    at performUnitOfWork (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5fa2753c:19196:20)
+[     388ms] [ERROR] Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem. @ http://127.0.0.1:5179/node_modules/.vite/deps/chunk-I4MZPW7S.js?v=f957d4dc:157
+[     388ms] [ERROR] Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem. @ http://127.0.0.1:5179/node_modules/.vite/deps/chunk-I4MZPW7S.js?v=f957d4dc:157
+[     392ms] TypeError: Cannot read properties of null (reading 'useState')
+    at useState (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-I4MZPW7S.js?v=f957d4dc:1088:29)
+    at ReactFlowProvider (http://127.0.0.1:5179/node_modules/.vite/deps/@xyflow_react.js?v=c293d998:8992:46)
+    at renderWithHooks (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5fa2753c:11546:26)
+    at mountIndeterminateComponent (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5fa2753c:14924:21)
+    at beginWork (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5fa2753c:15912:22)
+    at HTMLUnknownElement.callCallback2 (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5fa2753c:3672:22)
+    at Object.invokeGuardedCallbackDev (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5fa2753c:3697:24)
+    at invokeGuardedCallback (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5fa2753c:3731:39)
+    at beginWork$1 (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5fa2753c:19763:15)
+    at performUnitOfWork (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5fa2753c:19196:20)
+[     390ms] [ERROR] The above error occurred in the <ReactFlowProvider> component:
+
+    at ReactFlowProvider (http://127.0.0.1:5179/node_modules/.vite/deps/@xyflow_react.js?v=c293d998:8991:44)
+    at ProjectMap
+    at main
+    at div
+    at Shell (http://127.0.0.1:5179/src/components/Shell.tsx?t=1782664277731:39:16)
+    at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries. @ http://127.0.0.1:5179/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5fa2753c:14029
+[     393ms] TypeError: Cannot read properties of null (reading 'useState')
+    at useState (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-I4MZPW7S.js?v=f957d4dc:1088:29)
+    at ReactFlowProvider (http://127.0.0.1:5179/node_modules/.vite/deps/@xyflow_react.js?v=c293d998:8992:46)
+    at renderWithHooks (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5fa2753c:11546:26)
+    at mountIndeterminateComponent (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5fa2753c:14924:21)
+    at beginWork (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5fa2753c:15912:22)
+    at beginWork$1 (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5fa2753c:19751:22)
+    at performUnitOfWork (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5fa2753c:19196:20)
+    at workLoopSync (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5fa2753c:19135:13)
+    at renderRootSync (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5fa2753c:19114:15)
+    at recoverFromConcurrentError (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-XPR23Y44.js?v=5fa2753c:18734:28)
+[     549ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://127.0.0.1:5179/node_modules/.vite/deps/chunk-XPR23Y44.js?v=f957d4dc:21548

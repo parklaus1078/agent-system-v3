@@ -1,0 +1,35 @@
+- generic [active] [ref=e1]:
+  - heading "Directory listing for /" [level=1] [ref=e2]
+  - separator [ref=e3]
+  - list [ref=e4]:
+    - listitem [ref=e5]:
+      - link ".claude/" [ref=e6] [cursor=pointer]:
+        - /url: .claude/
+    - listitem [ref=e7]:
+      - link ".git/" [ref=e8] [cursor=pointer]:
+        - /url: .git/
+    - listitem [ref=e9]:
+      - link ".gitignore" [ref=e10] [cursor=pointer]:
+        - /url: .gitignore
+    - listitem [ref=e11]:
+      - link ".playwright-mcp/" [ref=e12] [cursor=pointer]:
+        - /url: .playwright-mcp/
+    - listitem [ref=e13]:
+      - link ".uiverify/" [ref=e14] [cursor=pointer]:
+        - /url: .uiverify/
+    - listitem [ref=e15]:
+      - link "api/" [ref=e16] [cursor=pointer]:
+        - /url: api/
+    - listitem [ref=e17]:
+      - link "docs/" [ref=e18] [cursor=pointer]:
+        - /url: docs/
+    - listitem [ref=e19]:
+      - link "node_modules/" [ref=e20] [cursor=pointer]:
+        - /url: node_modules/
+    - listitem [ref=e21]:
+      - link "README.md" [ref=e22] [cursor=pointer]:
+        - /url: README.md
+    - listitem [ref=e23]:
+      - link "web/" [ref=e24] [cursor=pointer]:
+        - /url: web/
+  - separator [ref=e25]

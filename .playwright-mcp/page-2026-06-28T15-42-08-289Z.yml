@@ -1,0 +1,251 @@
+- generic [ref=e4]:
+  - banner [ref=e5]:
+    - generic [ref=e6] [cursor=pointer]:
+      - generic [ref=e7]: CT
+      - generic [ref=e8]: Control Tower
+    - navigation [ref=e10]:
+      - generic [ref=e11] [cursor=pointer]: Mobile Todo
+      - generic [ref=e291]: /
+      - generic [ref=e292] [cursor=pointer]: SUBS
+      - generic [ref=e293]: /
+      - generic [ref=e294]: step 04
+    - generic [ref=e13]:
+      - img [ref=e14]
+      - 'textbox "추적: 파일 · 심볼 · UI 요소 → useEntitlement.ts" [ref=e17]':
+        - /placeholder: "추적: 파일 · 심볼 · UI 요소  →  useEntitlement.ts"
+        - text: useEntitlement.ts
+    - generic [ref=e18]:
+      - generic [ref=e20]: live
+      - generic [ref=e21]: 00:42:07
+    - generic [ref=e22]:
+      - button "Navigator" [ref=e23] [cursor=pointer]
+      - button "Cockpit" [ref=e24] [cursor=pointer]
+    - button "Legend" [active] [ref=e25] [cursor=pointer]:
+      - img [ref=e26]
+      - text: Legend
+  - main [ref=e31]:
+    - generic [ref=e295]:
+      - generic [ref=e296]:
+        - button "레인" [ref=e297] [cursor=pointer]:
+          - img [ref=e298]
+          - text: 레인
+        - generic [ref=e300]: step 04 · review gate
+        - generic [ref=e302]: Entitlement check & feature gating
+        - generic [ref=e303]:
+          - generic [ref=e304]: +58 −12
+          - generic [ref=e305]: ·
+          - generic [ref=e306]: 3 files
+          - generic [ref=e307]: ·
+          - generic [ref=e308]: commit a1b2c3d
+      - generic [ref=e309]:
+        - generic [ref=e310]:
+          - generic [ref=e311]:
+            - button "useEntitlement.ts NEW" [ref=e312] [cursor=pointer]:
+              - text: useEntitlement.ts
+              - generic [ref=e313]: NEW
+            - button "subscriptionSlice.ts" [ref=e314] [cursor=pointer]
+            - button "PaywallScreen.tsx" [ref=e315] [cursor=pointer]
+          - generic [ref=e317]:
+            - generic [ref=e318]:
+              - img [ref=e319]
+              - text: hooks/useEntitlement.ts ·
+              - generic [ref=e322]: 새 파일
+            - generic [ref=e323]:
+              - generic [ref=e324]: "1"
+              - generic [ref=e325]: +
+              - generic [ref=e326]: "import { useAppSelector } from '../store/hooks';"
+            - generic [ref=e327]:
+              - generic [ref=e328]: "2"
+              - generic [ref=e329]: +
+              - generic [ref=e330]: "import type { Capability } from '../models/Plan';"
+            - generic [ref=e331]:
+              - generic [ref=e332]: "3"
+              - generic [ref=e333]: +
+            - generic [ref=e335]:
+              - generic [ref=e336]: "4"
+              - generic [ref=e337]: +
+              - generic [ref=e338]: "/** true if the active plan grants `cap`. */"
+            - generic [ref=e339]:
+              - generic [ref=e340]: "5"
+              - generic [ref=e341]: +
+              - generic [ref=e342]: "export function useEntitlement(cap: Capability): boolean {"
+            - generic [ref=e343]:
+              - generic [ref=e344]: "6"
+              - generic [ref=e345]: +
+              - generic [ref=e346]: const ents = useAppSelector(s => s.subscription.entitlements);
+            - generic [ref=e347]:
+              - generic [ref=e348]: "7"
+              - generic [ref=e349]: +
+              - generic [ref=e350]: return ents.includes(cap);
+            - generic [ref=e351]:
+              - generic [ref=e352]: "8"
+              - generic [ref=e353]: +
+              - generic [ref=e354]: "}"
+        - generic [ref=e355]:
+          - generic [ref=e356]:
+            - generic [ref=e357]:
+              - img [ref=e358]
+              - generic [ref=e361]: 이 step이 만든 지도 조각
+              - generic [ref=e362]: +5 노드·엣지
+            - generic [ref=e363]:
+              - generic [ref=e364]:
+                - img [ref=e365]
+                - generic [ref=e368]: useEntitlement.ts
+                - generic [ref=e369]: CodeRegion · NEW
+              - generic [ref=e370]:
+                - generic [ref=e371]: touches →
+                - generic [ref=e372]: subscriptionSlice.ts · PaywallScreen.tsx
+              - generic [ref=e373]:
+                - img [ref=e374]
+                - generic [ref=e376]: entitlement.test.ts
+                - generic [ref=e377]: tested_by
+              - generic [ref=e378]:
+                - img [ref=e379]
+                - generic [ref=e381]: gate by entitlement flag
+                - generic [ref=e382]: decided
+              - generic [ref=e383]:
+                - generic [ref=e384]: produced →
+                - generic [ref=e385]: commit a1b2c3d
+          - generic [ref=e386]:
+            - generic [ref=e387]:
+              - img [ref=e388]
+              - generic [ref=e390]: Decision — 왜
+            - generic [ref=e391]:
+              - text: 기능 게이팅을 capability(entitlement) 플래그로 한다. 플랜 이름(
+              - code [ref=e392]: "'pro'"
+              - text: )으로 분기하지 않는다 — 프로모션·승계·새 티어가 생겨도 게이트 지점을 건드리지 않게.
+            - generic [ref=e393]:
+              - generic [ref=e394]:
+                - generic [ref=e395]: 채택
+                - generic [ref=e396]:
+                  - text: capability 단위 entitlement 검사 (
+                  - code [ref=e397]: useEntitlement('unlimited_todos')
+                  - text: )
+              - generic [ref=e398]:
+                - generic [ref=e399]: 기각
+                - generic [ref=e400]: plan 문자열 분기 — 새 티어마다 모든 게이트 수정 필요
+          - generic [ref=e401]:
+            - generic [ref=e402]:
+              - generic [ref=e403]: Acceptance
+              - generic [ref=e404]: 3 / 4
+            - generic [ref=e405]:
+              - generic [ref=e406]:
+                - img [ref=e407]
+                - generic [ref=e410]: Free 사용자는 Pro 기능에서 Paywall을 본다
+              - generic [ref=e411]:
+                - img [ref=e412]
+                - generic [ref=e415]: Pro 사용자는 Pro 기능에서 Paywall을 건너뛴다
+              - generic [ref=e416]:
+                - img [ref=e417]
+                - generic [ref=e420]: Team 전용 기능은 Pro에게 숨겨진다
+              - generic [ref=e421]:
+                - img [ref=e422]
+                - generic [ref=e424]: 구매 복원 시 entitlement 재부여 step 05로 이월
+          - generic [ref=e425]:
+            - generic [ref=e426]:
+              - generic [ref=e427]: Tests
+              - generic [ref=e428]: green
+            - generic [ref=e430]:
+              - generic [ref=e431]:
+                - img [ref=e432]
+                - generic [ref=e434]: entitlement.test.ts
+                - generic [ref=e435]: 7 passed
+              - generic [ref=e436]:
+                - img [ref=e437]
+                - generic [ref=e439]: billing.integration.test.ts
+                - generic [ref=e440]: 2 passed · 1 skipped
+      - generic [ref=e442]:
+        - generic [ref=e443]: step 04 게이트 — 당신의 결정을 기다립니다
+        - generic [ref=e444]:
+          - button "수정요청 R" [ref=e445] [cursor=pointer]:
+            - img [ref=e446]
+            - text: 수정요청
+            - generic [ref=e448]: R
+          - button "내가 인수 T" [ref=e449] [cursor=pointer]:
+            - img [ref=e450]
+            - text: 내가 인수
+            - generic [ref=e453]: T
+          - button "승인 A" [ref=e454] [cursor=pointer]:
+            - img [ref=e455]
+            - text: 승인
+            - generic [ref=e457]: A
+  - generic [ref=e460]:
+    - generic [ref=e461]:
+      - generic [ref=e462]: 범례 — Map Tokens
+      - button "✕" [ref=e463] [cursor=pointer]
+    - generic [ref=e464]:
+      - generic [ref=e465]: 원칙
+      - generic [ref=e466]: 모양·아이콘 = 노드 종류, 색 = 상태. 두 축을 분리해 한눈에 읽힌다.
+      - generic [ref=e467]: 노드 6종
+      - generic [ref=e468]:
+        - generic [ref=e469]:
+          - img [ref=e471]
+          - generic [ref=e474]:
+            - generic [ref=e475]: Objective
+            - generic [ref=e476]: 루트 목표. 하나, 살아있음.
+        - generic [ref=e479]:
+          - generic [ref=e480]: Ticket
+          - generic [ref=e481]: 목표의 하위 작업. step 진행도(N/M) + 상태색.
+        - generic [ref=e482]:
+          - generic [ref=e483]: "04"
+          - generic [ref=e484]:
+            - generic [ref=e485]: Step
+            - generic [ref=e486]: 티켓을 쪼갠 작은 단위. 리뷰 게이트.
+        - generic [ref=e487]:
+          - img [ref=e489]
+          - generic [ref=e492]:
+            - generic [ref=e493]: CodeRegion
+            - generic [ref=e494]: 파일/심볼. 점선 = 코드 레이어.
+        - generic [ref=e495]:
+          - img [ref=e497]
+          - generic [ref=e499]:
+            - generic [ref=e500]: Test
+            - generic [ref=e501]: 검증. 통과=초록, 실패=빨강.
+        - generic [ref=e502]:
+          - img [ref=e504]
+          - generic [ref=e506]:
+            - generic [ref=e507]: Decision
+            - generic [ref=e508]: 에이전트의 선택과 이유(why).
+      - generic [ref=e509]: 엣지
+      - generic [ref=e510]:
+        - generic [ref=e511]:
+          - img [ref=e512]
+          - generic [ref=e513]: has
+          - generic [ref=e514]: 목표→티켓 포함
+        - generic [ref=e515]:
+          - img [ref=e516]
+          - generic [ref=e519]: subdivides
+          - generic [ref=e520]: 재귀 분해
+        - generic [ref=e521]:
+          - img [ref=e522]
+          - generic [ref=e523]: touches
+          - generic [ref=e524]: step→코드 · 진실원천
+        - generic [ref=e525]:
+          - img [ref=e526]
+          - generic [ref=e527]: tested_by
+          - generic [ref=e528]: 테스트 연결
+        - generic [ref=e529]:
+          - img [ref=e530]
+          - generic [ref=e531]: decided
+          - generic [ref=e532]: 결정 연결
+        - generic [ref=e533]:
+          - img [ref=e534]
+          - generic [ref=e536]: produced
+          - generic [ref=e537]: commit 산출
+      - generic [ref=e538]: 상태색
+      - generic [ref=e539]:
+        - generic [ref=e540]:
+          - generic [ref=e542]: planning
+          - generic [ref=e543]: 계획 중
+        - generic [ref=e544]:
+          - generic [ref=e546]: executing
+          - generic [ref=e547]: 실행 중 · live
+        - generic [ref=e548]:
+          - generic [ref=e550]: awaiting-review
+          - generic [ref=e551]: 당신 차례
+        - generic [ref=e552]:
+          - generic [ref=e554]: done
+          - generic [ref=e555]: 완료
+        - generic [ref=e556]:
+          - generic [ref=e558]: blocked
+          - generic [ref=e559]: 실패 · 막힘

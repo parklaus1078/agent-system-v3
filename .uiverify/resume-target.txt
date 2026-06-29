@@ -1,0 +1,4 @@
+cease_epoch=1782666867
+resume_target_epoch=1782674067
+cease_human=2026-06-29 02:14:27
+resume_human=2026-06-29 04:14:27

@@ -1,0 +1,110 @@
+- generic [ref=e3]:
+  - heading "LLM Dev Control Tower" [level=1] [ref=e4]
+  - banner [ref=e5]:
+    - generic [ref=e6]:
+      - button "프로젝트 목록" [ref=e7] [cursor=pointer]:
+        - generic [ref=e8]: CT
+        - generic [ref=e9]: Control Tower
+      - button "구독 할일앱" [ref=e43] [cursor=pointer]
+    - generic [ref=e11]:
+      - generic:
+        - img
+      - searchbox "추적" [ref=e12]
+    - generic [ref=e13]:
+      - generic [ref=e14]:
+        - generic [ref=e16]: live
+        - generic [ref=e17]: 00:00:11
+      - group "altitude" [ref=e18]:
+        - button "Navigator" [ref=e19] [cursor=pointer]
+        - button "Cockpit" [pressed] [ref=e20] [cursor=pointer]
+      - button "Legend" [ref=e21] [cursor=pointer]:
+        - img [ref=e22]
+        - text: Legend
+  - main [ref=e27]:
+    - generic [ref=e44]:
+      - complementary [ref=e45]:
+        - generic [ref=e46]:
+          - generic [ref=e47]:
+            - img [ref=e48]
+            - generic [ref=e51]: PROJECT MAP
+          - generic [ref=e52]:
+            - generic [ref=e54]:
+              - img [ref=e55]
+              - text: OBJECTIVE
+            - generic [ref=e59]: 구독 티어 할일앱
+          - generic [ref=e60]:
+            - button "CRUD 할일 CRUD done" [ref=e61] [cursor=pointer]:
+              - generic [ref=e62]:
+                - generic [ref=e64]: CRUD
+                - generic [ref=e65]: 할일 CRUD
+              - generic [ref=e69]: done
+            - button "GATE 구독 티어 + 기능 게이팅 awaiting review" [ref=e70] [cursor=pointer]:
+              - generic [ref=e71]:
+                - generic [ref=e73]: GATE
+                - generic [ref=e74]: 구독 티어 + 기능 게이팅
+              - generic [ref=e78]: awaiting review
+            - button "PAY 페이월 & 업셀 planning" [ref=e79] [cursor=pointer]:
+              - generic [ref=e80]:
+                - generic [ref=e82]: PAY
+                - generic [ref=e83]: 페이월 & 업셀
+              - generic [ref=e86]: planning
+            - button "SYNC 오프라인 동기화 blocked" [ref=e87] [cursor=pointer]:
+              - generic [ref=e88]:
+                - generic [ref=e90]: SYNC
+                - generic [ref=e91]: 오프라인 동기화
+              - generic [ref=e95]: blocked
+      - generic [ref=e97]:
+        - generic [ref=e98]:
+          - generic [ref=e99]: GATE
+          - heading "구독 티어 + 기능 게이팅" [level=2] [ref=e100]
+          - generic [ref=e101]: 1 / 3
+        - list [ref=e102]:
+          - listitem [ref=e103]:
+            - button "01 티어 플래그 정의 done touches src/billing/flags.ts" [ref=e104] [cursor=pointer]:
+              - generic [ref=e105]: "01"
+              - generic [ref=e106]:
+                - generic [ref=e107]:
+                  - generic [ref=e108]: 티어 플래그 정의
+                  - generic [ref=e109]: done
+                - generic [ref=e111]: touches src/billing/flags.ts
+          - listitem [ref=e112]:
+            - button "02 게이트 컴포넌트 awaiting review touches src/billing/FeatureGate.tsx" [ref=e113] [cursor=pointer]:
+              - generic [ref=e114]: "02"
+              - generic [ref=e115]:
+                - generic [ref=e116]:
+                  - generic [ref=e117]: 게이트 컴포넌트
+                  - generic [ref=e118]: awaiting review
+                - generic [ref=e120]: touches src/billing/FeatureGate.tsx
+          - listitem [ref=e121]:
+            - button "03 업그레이드 안내 UI planned touches —" [ref=e122] [cursor=pointer]:
+              - generic [ref=e123]: "03"
+              - generic [ref=e124]:
+                - generic [ref=e125]:
+                  - generic [ref=e126]: 업그레이드 안내 UI
+                  - generic [ref=e127]: planned
+                - generic [ref=e129]: touches —
+      - complementary [ref=e130]:
+        - generic [ref=e131]:
+          - generic [ref=e132]:
+            - generic [ref=e133]: step 02
+            - generic [ref=e134]: awaiting review
+          - heading "게이트 컴포넌트" [level=3] [ref=e136]
+          - generic [ref=e137]:
+            - generic [ref=e138]:
+              - img [ref=e139]
+              - generic [ref=e141]: DECISION
+            - paragraph [ref=e142]: 게이팅은 플래그로 (티어 분기 금지)
+          - generic [ref=e143]:
+            - generic [ref=e144]:
+              - generic [ref=e145]: ACCEPTANCE
+              - generic [ref=e146]: 0 / 1
+            - generic [ref=e147]:
+              - generic [ref=e148]: TESTS
+              - generic [ref=e149]: ● green
+          - generic [ref=e150]:
+            - button "승인" [ref=e151] [cursor=pointer]:
+              - img [ref=e152]
+              - text: 승인
+            - button "전체 리뷰" [ref=e154] [cursor=pointer]:
+              - text: 전체 리뷰
+              - img [ref=e155]

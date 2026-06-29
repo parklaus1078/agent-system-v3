@@ -1,0 +1,94 @@
+- generic [ref=e3]:
+  - heading "LLM Dev Control Tower" [level=1] [ref=e4]
+  - banner [ref=e5]:
+    - generic [ref=e6]:
+      - button "프로젝트 목록" [ref=e7] [cursor=pointer]:
+        - generic [ref=e8]: CT
+        - generic [ref=e9]: Control Tower
+      - button "구독 할일앱" [ref=e11] [cursor=pointer]
+    - generic [ref=e13]:
+      - generic:
+        - img
+      - searchbox "추적" [ref=e14]
+    - generic [ref=e15]:
+      - generic [ref=e16]:
+        - generic [ref=e18]: live
+        - generic [ref=e19]: 00:00:08
+      - group "altitude" [ref=e20]:
+        - button "Navigator" [ref=e21] [cursor=pointer]
+        - button "Cockpit" [pressed] [ref=e22] [cursor=pointer]
+      - button "Legend" [ref=e23] [cursor=pointer]:
+        - img [ref=e24]
+        - text: Legend
+  - main [ref=e29]:
+    - generic [ref=e130]:
+      - complementary [ref=e131]:
+        - generic [ref=e132]:
+          - generic [ref=e133]:
+            - img [ref=e134]
+            - generic [ref=e137]: PROJECT MAP
+          - generic [ref=e138]:
+            - generic [ref=e140]:
+              - img [ref=e141]
+              - text: OBJECTIVE
+            - generic [ref=e145]: 구독 티어 할일앱
+          - generic [ref=e146]:
+            - button "CRUD 할일 CRUD done" [ref=e147] [cursor=pointer]:
+              - generic [ref=e148]:
+                - generic [ref=e150]: CRUD
+                - generic [ref=e151]: 할일 CRUD
+              - generic [ref=e155]: done
+            - button "GATE 구독 티어 + 기능 게이팅 awaiting review" [ref=e156] [cursor=pointer]:
+              - generic [ref=e157]:
+                - generic [ref=e159]: GATE
+                - generic [ref=e160]: 구독 티어 + 기능 게이팅
+              - generic [ref=e164]: awaiting review
+            - button "PAY 페이월 & 업셀 planning" [ref=e165] [cursor=pointer]:
+              - generic [ref=e166]:
+                - generic [ref=e168]: PAY
+                - generic [ref=e169]: 페이월 & 업셀
+              - generic [ref=e172]: planning
+            - button "SYNC 오프라인 동기화 blocked" [ref=e173] [cursor=pointer]:
+              - generic [ref=e174]:
+                - generic [ref=e176]: SYNC
+                - generic [ref=e177]: 오프라인 동기화
+              - generic [ref=e181]: blocked
+      - generic [ref=e183]:
+        - generic [ref=e184]:
+          - generic [ref=e185]: SYNC
+          - heading "오프라인 동기화" [level=2] [ref=e186]
+          - generic [ref=e187]: 1 / 3
+        - list [ref=e188]:
+          - listitem [ref=e189]:
+            - button "01 동기화 큐 done touches src/sync/queue.ts" [ref=e190] [cursor=pointer]:
+              - generic [ref=e191]: "01"
+              - generic [ref=e192]:
+                - generic [ref=e193]:
+                  - generic [ref=e194]: 동기화 큐
+                  - generic [ref=e195]: done
+                - generic [ref=e197]: touches src/sync/queue.ts
+          - listitem [ref=e198]:
+            - button "02 충돌 해결 blocked touches —" [ref=e199] [cursor=pointer]:
+              - generic [ref=e200]: "02"
+              - generic [ref=e201]:
+                - generic [ref=e202]:
+                  - generic [ref=e203]: 충돌 해결
+                  - generic [ref=e204]: blocked
+                - generic [ref=e206]: touches —
+          - listitem [ref=e207]:
+            - button "03 재시도 로직 planned touches —" [ref=e208] [cursor=pointer]:
+              - generic [ref=e209]: "03"
+              - generic [ref=e210]:
+                - generic [ref=e211]:
+                  - generic [ref=e212]: 재시도 로직
+                  - generic [ref=e213]: planned
+                - generic [ref=e215]: touches —
+      - complementary [ref=e216]:
+        - generic [ref=e217]:
+          - generic [ref=e218]:
+            - generic [ref=e219]: step 01
+            - generic [ref=e220]: done
+          - heading "동기화 큐" [level=3] [ref=e222]
+          - generic [ref=e223]:
+            - img [ref=e224]
+            - generic [ref=e226]: 승인 완료 · commit 채택됨

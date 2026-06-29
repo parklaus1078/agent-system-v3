@@ -1,0 +1,72 @@
+[     278ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://127.0.0.1:5179/node_modules/.vite/deps/chunk-373CG7ZK.js?v=53036e67:21548
+[     284ms] [ERROR] Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem. @ http://127.0.0.1:5179/node_modules/.vite/deps/chunk-I4MZPW7S.js?v=1c6b092d:157
+[     284ms] [ERROR] Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem. @ http://127.0.0.1:5179/node_modules/.vite/deps/chunk-I4MZPW7S.js?v=1c6b092d:157
+[     294ms] TypeError: Cannot read properties of null (reading 'useRef')
+    at useRef (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-I4MZPW7S.js?v=1c6b092d:1096:29)
+    at exports.useSyncExternalStoreWithSelector (http://127.0.0.1:5179/node_modules/.vite/deps/zustand.js?v=d757e1f0:94:23)
+    at useStore (http://127.0.0.1:5179/node_modules/.vite/deps/zustand.js?v=d757e1f0:208:17)
+    at useBoundStore (http://127.0.0.1:5179/node_modules/.vite/deps/zustand.js?v=d757e1f0:225:51)
+    at Shell (http://127.0.0.1:5179/src/components/Shell.tsx:39:16)
+    at renderWithHooks (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-373CG7ZK.js?v=53036e67:11546:26)
+    at mountIndeterminateComponent (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-373CG7ZK.js?v=53036e67:14924:21)
+    at beginWork (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-373CG7ZK.js?v=53036e67:15912:22)
+    at HTMLUnknownElement.callCallback2 (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-373CG7ZK.js?v=53036e67:3672:22)
+    at Object.invokeGuardedCallbackDev (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-373CG7ZK.js?v=53036e67:3697:24)
+[     286ms] [ERROR] Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem. @ http://127.0.0.1:5179/node_modules/.vite/deps/chunk-I4MZPW7S.js?v=1c6b092d:157
+[     286ms] [ERROR] Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem. @ http://127.0.0.1:5179/node_modules/.vite/deps/chunk-I4MZPW7S.js?v=1c6b092d:157
+[     294ms] TypeError: Cannot read properties of null (reading 'useRef')
+    at useRef (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-I4MZPW7S.js?v=1c6b092d:1096:29)
+    at exports.useSyncExternalStoreWithSelector (http://127.0.0.1:5179/node_modules/.vite/deps/zustand.js?v=d757e1f0:94:23)
+    at useStore (http://127.0.0.1:5179/node_modules/.vite/deps/zustand.js?v=d757e1f0:208:17)
+    at useBoundStore (http://127.0.0.1:5179/node_modules/.vite/deps/zustand.js?v=d757e1f0:225:51)
+    at Shell (http://127.0.0.1:5179/src/components/Shell.tsx:39:16)
+    at renderWithHooks (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-373CG7ZK.js?v=53036e67:11546:26)
+    at mountIndeterminateComponent (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-373CG7ZK.js?v=53036e67:14924:21)
+    at beginWork (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-373CG7ZK.js?v=53036e67:15912:22)
+    at HTMLUnknownElement.callCallback2 (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-373CG7ZK.js?v=53036e67:3672:22)
+    at Object.invokeGuardedCallbackDev (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-373CG7ZK.js?v=53036e67:3697:24)
+[     287ms] [ERROR] The above error occurred in the <Shell> component:
+
+    at Shell (http://127.0.0.1:5179/src/components/Shell.tsx:39:16)
+    at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries. @ http://127.0.0.1:5179/node_modules/.vite/deps/chunk-373CG7ZK.js?v=53036e67:14029
+[     294ms] TypeError: Cannot read properties of null (reading 'useRef')
+    at useRef (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-I4MZPW7S.js?v=1c6b092d:1096:29)
+    at exports.useSyncExternalStoreWithSelector (http://127.0.0.1:5179/node_modules/.vite/deps/zustand.js?v=d757e1f0:94:23)
+    at useStore (http://127.0.0.1:5179/node_modules/.vite/deps/zustand.js?v=d757e1f0:208:17)
+    at useBoundStore (http://127.0.0.1:5179/node_modules/.vite/deps/zustand.js?v=d757e1f0:225:51)
+    at Shell (http://127.0.0.1:5179/src/components/Shell.tsx:39:16)
+    at renderWithHooks (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-373CG7ZK.js?v=53036e67:11546:26)
+    at mountIndeterminateComponent (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-373CG7ZK.js?v=53036e67:14924:21)
+    at beginWork (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-373CG7ZK.js?v=53036e67:15912:22)
+    at beginWork$1 (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-373CG7ZK.js?v=53036e67:19751:22)
+    at performUnitOfWork (http://127.0.0.1:5179/node_modules/.vite/deps/chunk-373CG7ZK.js?v=53036e67:19196:20)
+[     437ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://127.0.0.1:5179/node_modules/.vite/deps/chunk-XPR23Y44.js?v=1c6b092d:21548
+[   38097ms] [LOG] [vite] server connection lost. Polling for restart... @ http://127.0.0.1:5179/@vite/client:559
+[   38099ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5179/:0
+[   39289ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://127.0.0.1:5179/node_modules/.vite/deps/chunk-XPR23Y44.js?v=3b9bac28:21548
+[   50316ms] [LOG] [vite] server connection lost. Polling for restart... @ http://127.0.0.1:5179/@vite/client:559
+[   50317ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5179/:0
+[   51319ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5179/:0
+[   52321ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5179/:0
+[   53322ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5179/:0
+[   54323ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5179/:0
+[   55713ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://127.0.0.1:5179/node_modules/.vite/deps/chunk-XPR23Y44.js?v=0619fd48:21548

@@ -1,0 +1,77 @@
+- generic [ref=e3]:
+  - heading "LLM Dev Control Tower" [level=1] [ref=e4]
+  - banner [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e7]: CT
+      - generic [ref=e8]: Control Tower
+      - button "구독 할일앱" [ref=e10] [cursor=pointer]
+    - generic [ref=e12]:
+      - generic:
+        - img
+      - searchbox "추적" [ref=e13]
+    - generic [ref=e14]:
+      - generic [ref=e15]:
+        - generic [ref=e17]: live
+        - generic [ref=e18]: 00:00:00
+      - group "altitude" [ref=e19]:
+        - button "Navigator" [pressed] [ref=e20] [cursor=pointer]
+        - button "Cockpit" [ref=e21] [cursor=pointer]
+      - button "Legend" [ref=e22] [cursor=pointer]:
+        - img [ref=e23]
+        - text: Legend
+  - main [ref=e28]:
+    - application [ref=e29]:
+      - generic [ref=e31]:
+        - generic:
+          - generic:
+            - img:
+              - group "Edge from obj to t-crud" [ref=e32] [cursor=pointer]
+            - img:
+              - group "Edge from obj to t-gate" [ref=e35] [cursor=pointer]
+            - img:
+              - group "Edge from t-gate to dec"
+          - generic:
+            - group [ref=e38]:
+              - generic [ref=e39]:
+                - generic [ref=e40]:
+                  - generic [ref=e41]:
+                    - img [ref=e42]
+                    - text: OBJECTIVE
+                  - generic [ref=e45]: live
+                - generic [ref=e46]: 구독 티어 할일앱
+            - group [ref=e47] [cursor=pointer]:
+              - generic [ref=e48]:
+                - generic [ref=e49]:
+                  - generic [ref=e50]: CRUD
+                  - generic [ref=e51]: done
+                - generic [ref=e53]: 할일 CRUD
+                - generic [ref=e57]: 2 / 2 steps
+            - group [ref=e58] [cursor=pointer]:
+              - generic [ref=e59]:
+                - generic [ref=e60]:
+                  - generic [ref=e61]: GATE
+                  - generic [ref=e62]: executing
+                - generic [ref=e64]: 구독 티어 + 기능 게이팅
+                - generic [ref=e67]:
+                  - generic [ref=e68]: 1 / 3 steps
+                  - generic [ref=e69]:
+                    - text: step 02 대기
+                    - img [ref=e70]
+            - group [ref=e72]:
+              - generic [ref=e73]:
+                - generic [ref=e74]:
+                  - img [ref=e75]
+                  - generic [ref=e77]: DECISION
+                - generic [ref=e78]: 게이팅은 플래그로 (티어 분기 금지)
+      - img
+      - generic [ref=e80]:
+        - button "CodeRegion 레이어" [ref=e81] [cursor=pointer]:
+          - img [ref=e82]
+          - text: CodeRegion 레이어
+        - generic [ref=e85]:
+          - text: 지금
+          - generic [ref=e87]: GATE
+          - text: 가 당신의 리뷰를 기다리는 중
+      - button "목표 · 티켓" [ref=e89] [cursor=pointer]:
+        - img [ref=e90]
+        - text: 목표 · 티켓

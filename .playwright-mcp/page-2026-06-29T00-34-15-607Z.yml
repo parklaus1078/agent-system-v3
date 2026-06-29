@@ -1,0 +1,28 @@
+- main [ref=e31]:
+  - generic [ref=e112]:
+    - generic [ref=e113]:
+      - generic [ref=e114]: CT
+      - generic [ref=e115]: Control Tower
+      - generic [ref=e116]: local · single-user
+    - generic [ref=e117]: 새 목표
+    - generic [ref=e118]:
+      - 'textbox "거친 목표를 한 줄~문단으로. 예: \"Todo 앱에 Free/Pro/Team 구독 티어와 기능 게이팅을 붙인다.\"" [ref=e119]':
+        - /placeholder: "거친 목표를 한 줄~문단으로.  예: \"Todo 앱에 Free/Pro/Team 구독 티어와 기능 게이팅을 붙인다.\""
+      - generic [ref=e120]:
+        - generic [ref=e121]: PLAN 에이전트가 step으로 분해 → 승인 후 실행
+        - button "분해 시작" [ref=e122] [cursor=pointer]:
+          - text: 분해 시작
+          - img [ref=e123]
+    - generic [ref=e126]: 진행 중인 프로젝트
+    - generic [ref=e127] [cursor=pointer]:
+      - generic [ref=e128]:
+        - generic [ref=e129]: Mobile Todo
+        - generic [ref=e130]: 5 tickets · 26 steps
+        - generic [ref=e131]: 1건 리뷰 대기
+      - generic [ref=e133]: Free / Pro / Team 구독 티어를 가진 할 일 관리 앱
+      - generic [ref=e140]:
+        - generic [ref=e141]: AUTH
+        - generic [ref=e142]: CRUD
+        - generic [ref=e143]: SUBS
+        - generic [ref=e144]: GATE
+        - generic [ref=e145]: SYNC
