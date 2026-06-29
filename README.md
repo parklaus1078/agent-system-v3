@@ -109,6 +109,54 @@ cd web && npm run dev
 
 ---
 
+## `real` 모드로 돌리기 (실제 Claude가 코딩)
+
+`simulated`은 stub이 `generated/step_N.ts`만 쓰지만, `real` 모드는 **실제 에이전트 CLI가 대상 레포의 파일을
+편집·커밋**하고 그 diff가 지도로 들어온다. 결정적이지 않고 step당 ~1–4분 걸린다(쿼터 소모).
+
+**추가 prerequisites**
+- **executor는 항상 CLI를 쓴다** → `claude` CLI가 PATH에 있고 인증돼 있어야 한다(Claude Code OAuth — `claude` 로그인).
+  `ANTHROPIC_API_KEY`가 있어도 그건 *planner*만 LangChain API로 보내고, **executor는 여전히 `claude` CLI로 돈다.**
+  - planner: `ANTHROPIC_API_KEY` 있으면 LangChain(`ChatAnthropic`), 없으면 `claude -p`(CLI).
+  - executor: `claude -p <prompt> --model claude-opus-4-8 --permission-mode acceptEdits` 를 `cwd=ASV3_TARGET_REPO_DIR`에서 실행.
+- (선택) `ASV3_BRAIN=codex`로 두면 executor가 `codex exec`를 쓴다(해당 CLI 필요).
+- ⚠️ executor는 `--permission-mode acceptEdits`로 **허락 없이 파일을 편집**한다 → 반드시 **전용/샌드박스 git 레포**를 대상으로 쓰고, step마다 커밋되는 것을 전제로 한다.
+
+**실행** (simulated과 동일하되 `ASV3_AGENT_MODE=real`, 대상 레포를 실제로 작업시킬 레포로 지정)
+
+```bash
+# 대상 레포: 에이전트가 실제로 코드를 짤 프로젝트 (전용/백업된 레포 권장)
+cd api
+
+# (planner를 API로 강제하려면) export ANTHROPIC_API_KEY=sk-ant-...   # 없으면 claude CLI로 폴백
+DATABASE_URL="sqlite+pysqlite:///./dev.db" \
+  ASV3_AGENT_MODE=real \
+  ASV3_TARGET_REPO_DIR=/path/to/your/target-repo \
+  ASV3_LLM_WIKI_ROOT="$HOME/llm_wiki" \
+  .venv/bin/python -m uvicorn app.main:app --port 8099
+```
+
+프론트는 동일: `VITE_API_BASE=http://127.0.0.1:8099 npm run dev`.
+
+**선택 — 실제 임베딩 & 영속 상태(포트폴리오용 풀스택)**
+```bash
+.venv/bin/pip install -e ".[postgres,rag]"     # psycopg/pgvector + huggingface 임베딩
+# Postgres를 띄우고 DATABASE_URL을 postgres로:
+DATABASE_URL="postgresql+psycopg://user:pass@localhost:5432/asv3" \
+  ASV3_AGENT_MODE=real ASV3_EMBEDDINGS=huggingface ASV3_CHECKPOINTER=postgres \
+  ASV3_TARGET_REPO_DIR=/path/to/your/target-repo ASV3_LLM_WIKI_ROOT="$HOME/llm_wiki" \
+  .venv/bin/python -m uvicorn app.main:app --port 8099
+```
+- `ASV3_EMBEDDINGS=huggingface` → 실제 임베딩(`sentence-transformers/all-MiniLM-L6-v2`, 첫 사용 시 모델 다운로드).
+  Postgres URL과 함께면 RAG가 **PGVector**로 영속된다.
+- `ASV3_CHECKPOINTER=postgres`(또는 Postgres URL + `auto`) → LangGraph 상태가 **재시작에도 살아남아 resume** 가능.
+  (SQLite/`memory`는 프로세스 수명 동안만 유지.)
+- `ASV3_LLM_WIKI_ROOT` 설정 시, 프로젝트 완료(전 티켓 done)에 Decision이 그 위키로 승격된다(미설정이면 skip).
+
+> 빠른 점검: `simulated`로 흐름을 먼저 검증(쿼터 0)한 뒤 `ASV3_AGENT_MODE=real`로 바꿔 같은 명령을 돌리면 된다.
+
+---
+
 ## 환경변수
 
 | 변수 | 기본값 | 의미 |

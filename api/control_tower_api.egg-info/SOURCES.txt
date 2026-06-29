@@ -28,6 +28,7 @@ control_tower_api.egg-info/dependency_links.txt
 control_tower_api.egg-info/requires.txt
 control_tower_api.egg-info/top_level.txt
 tests/test_api.py
+tests/test_defect_fixes.py
 tests/test_diff_ingest.py
 tests/test_embeddings.py
 tests/test_executor.py
