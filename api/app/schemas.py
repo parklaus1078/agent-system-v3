@@ -80,6 +80,16 @@ class PlanApproveIn(BaseModel):
     title: str | None = None  # optional edited ticket title (persisted if the ticket is new)
 
 
+class ProjectInfoOut(BaseModel):
+    projectId: str
+    repoDir: str
+    repoSource: str  # override | workspace | legacy | default — where repoDir came from
+
+
+class ProjectRepoIn(BaseModel):
+    repoDir: str | None = None  # set the project's target repo; null/empty -> revert to default
+
+
 class LifecycleStateOut(BaseModel):
     ticketId: str
     next: list[str] = []

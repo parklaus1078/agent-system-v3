@@ -1,12 +1,13 @@
 import type { ProjectGraph, GraphNode } from '../../domain/graph';
 import { neighbors } from '../../domain/graph';
 import type { ApiClient } from '../ApiClient';
-import type { StepDetail, ReviewAction, PlanProposal } from '../dto';
+import type { StepDetail, ReviewAction, PlanProposal, ProjectInfo } from '../dto';
 import { makeFixture } from './fixtures';
 
 export class MockApiClient implements ApiClient {
   private graph: ProjectGraph = makeFixture();
   private subs = new Set<() => void>();
+  private repoOverride: string | null = null; // null -> workspace default
 
   private notify() {
     this.subs.forEach((cb) => cb());
@@ -149,6 +150,18 @@ export class MockApiClient implements ApiClient {
       }
       this.notify();
     }, 900);
+  }
+
+  async getProjectInfo(): Promise<ProjectInfo> {
+    return this.repoOverride
+      ? { projectId: 'p1', repoDir: this.repoOverride, repoSource: 'override' }
+      : { projectId: 'p1', repoDir: '/tmp/asv3-workspace/p1', repoSource: 'workspace' };
+  }
+
+  async setProjectRepo(repoDir: string | null): Promise<ProjectInfo> {
+    this.repoOverride = repoDir && repoDir.trim() ? repoDir.trim() : null;
+    this.notify();
+    return this.getProjectInfo();
   }
 
   async owningPath(nodeId: string): Promise<string[]> {

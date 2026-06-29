@@ -20,7 +20,7 @@
 └─────────────────────────┘                           └───────────────┬──────────────┘
                                                                         │ headless CLI / commit
                                                                         ▼
-                                                       대상 git 레포(ASV3_TARGET_REPO_DIR)
+                                            프로젝트별 대상 git 레포(ASV3_WORKSPACE_DIR/{project_id})
 ```
 
 - **`api/`** — FastAPI. 티켓별 **LangGraph StateGraph**(`propose → approve(gate) → execute_step → review(gate) → …`)가
@@ -58,11 +58,17 @@ cd api
 python -m venv .venv
 .venv/bin/pip install -e ".[dev]"          # 런타임 + pytest/httpx
 # (선택) real 모드 RAG/Postgres: .venv/bin/pip install -e ".[postgres,rag]"
+cp .env.example .env                        # 백엔드 환경설정 — 여기서 편집(아래 설명)
 
 # 2) 프론트
 cd ../web
 npm install
 ```
+
+> **백엔드 환경설정은 `api/.env` 한 곳에서** 관리한다. api는 부팅 시 `api/.env`를 자동 로드하므로
+> (`app/__init__.py`), uvicorn 명령에 환경변수를 길게 나열할 필요가 없다 — `api/.env`만 고치고
+> `uvicorn app.main:app` 하면 된다. (CLI/docker-compose로 준 env는 파일보다 우선한다. `api/.env`는
+> gitignore됨.) 변수 의미는 아래 [환경변수](#환경변수) 표 참고.
 
 ---
 
@@ -71,19 +77,18 @@ npm install
 터미널 2개가 필요하다.
 
 ```bash
-# ── 0) executor가 커밋할 대상 레포 1개 준비 (한 번만) ──
-mkdir -p /tmp/asv3-target && git -C /tmp/asv3-target init -q \
-  && git -C /tmp/asv3-target commit -q --allow-empty -m init
-
 # ── 1) 데모 그래프 시드 (project p1: 목표 + 티켓 t-crud/t-gate/t-pay/t-sync) ──
+#     대상 레포는 따로 만들 필요 없음 — 프로젝트별로 ASV3_WORKSPACE_DIR/{project_id} 에
+#     자동 생성·git init 된다.
 cd api
-DATABASE_URL="sqlite+pysqlite:///./dev.db" .venv/bin/python seed_demo.py
+.venv/bin/python seed_demo.py
 
-# ── 2) 백엔드 (API :8099) ──
-DATABASE_URL="sqlite+pysqlite:///./dev.db" ASV3_AGENT_MODE=simulated \
-  ASV3_TARGET_REPO_DIR=/tmp/asv3-target \
-  .venv/bin/python -m uvicorn app.main:app --port 8099
+# ── 2) 백엔드 (API :8099) — 설정은 api/.env 에서 ──
+.venv/bin/python -m uvicorn app.main:app --port 8099
 ```
+> 기본 `api/.env`(=`.env.example` 복사본)는 `DATABASE_URL=sqlite…/dev.db`,
+> `ASV3_AGENT_MODE=simulated`, `ASV3_WORKSPACE_DIR=/tmp/asv3-workspace` 라서 위 데모가 바로 돈다.
+> (p1은 `/tmp/asv3-workspace/p1` 에서 작업·커밋.)
 
 ```bash
 # ── 3) 프론트 (다른 터미널) — 백엔드에 연결 ──
@@ -118,22 +123,22 @@ cd web && npm run dev
 - **executor는 항상 CLI를 쓴다** → `claude` CLI가 PATH에 있고 인증돼 있어야 한다(Claude Code OAuth — `claude` 로그인).
   `ANTHROPIC_API_KEY`가 있어도 그건 *planner*만 LangChain API로 보내고, **executor는 여전히 `claude` CLI로 돈다.**
   - planner: `ANTHROPIC_API_KEY` 있으면 LangChain(`ChatAnthropic`), 없으면 `claude -p`(CLI).
-  - executor: `claude -p <prompt> --model claude-opus-4-8 --permission-mode acceptEdits` 를 `cwd=ASV3_TARGET_REPO_DIR`에서 실행.
+  - executor: `claude -p <prompt> --model claude-opus-4-8 --permission-mode acceptEdits` 를 그 **프로젝트의 레포**(`ASV3_WORKSPACE_DIR/{project_id}`)에서 실행.
 - (선택) `ASV3_BRAIN=codex`로 두면 executor가 `codex exec`를 쓴다(해당 CLI 필요).
 - ⚠️ executor는 `--permission-mode acceptEdits`로 **허락 없이 파일을 편집**한다 → 반드시 **전용/샌드박스 git 레포**를 대상으로 쓰고, step마다 커밋되는 것을 전제로 한다.
 
-**실행** (simulated과 동일하되 `ASV3_AGENT_MODE=real`, 대상 레포를 실제로 작업시킬 레포로 지정)
+**실행** — `api/.env`에서 모드만 바꾸면 된다:
 
 ```bash
-# 대상 레포: 에이전트가 실제로 코드를 짤 프로젝트 (전용/백업된 레포 권장)
+# api/.env
+ASV3_AGENT_MODE=real
+ASV3_WORKSPACE_DIR=/home/you/asv3-projects   # 프로젝트별 레포의 루트({root}/{project_id})
+ASV3_LLM_WIKI_ROOT=/home/you/llm_wiki        # (선택) 완료 시 Decision 승격
+```
+```bash
 cd api
-
-# (planner를 API로 강제하려면) export ANTHROPIC_API_KEY=sk-ant-...   # 없으면 claude CLI로 폴백
-DATABASE_URL="sqlite+pysqlite:///./dev.db" \
-  ASV3_AGENT_MODE=real \
-  ASV3_TARGET_REPO_DIR=/path/to/your/target-repo \
-  ASV3_LLM_WIKI_ROOT="$HOME/llm_wiki" \
-  .venv/bin/python -m uvicorn app.main:app --port 8099
+# (planner를 API로 강제하려면) export ANTHROPIC_API_KEY=sk-ant-...  # 없으면 claude CLI로 폴백
+.venv/bin/python -m uvicorn app.main:app --port 8099
 ```
 
 프론트는 동일: `VITE_API_BASE=http://127.0.0.1:8099 npm run dev`.
@@ -141,15 +146,16 @@ DATABASE_URL="sqlite+pysqlite:///./dev.db" \
 **선택 — 실제 임베딩 & 영속 상태(Postgres + pgvector)**
 ```bash
 .venv/bin/pip install -e ".[postgres,rag]"     # psycopg/pgvector + huggingface 임베딩
-
-# Postgres+pgvector는 컨테이너로 띄우고(아래 "Docker — DB만 띄우기" 참고) api는 호스트에서:
-docker compose -f docker-compose.db.yml up -d
-
-DATABASE_URL="postgresql+psycopg://ct:ct@localhost:5432/controltower" \
-  ASV3_AGENT_MODE=real ASV3_EMBEDDINGS=huggingface ASV3_CHECKPOINTER=postgres \
-  ASV3_TARGET_REPO_DIR=/path/to/your/target-repo ASV3_LLM_WIKI_ROOT="$HOME/llm_wiki" \
-  .venv/bin/python -m uvicorn app.main:app --port 8099
+docker compose -f docker-compose.db.yml up -d   # Postgres+pgvector 컨테이너(아래 Docker 참고)
 ```
+```bash
+# api/.env 에 추가/수정
+DATABASE_URL=postgresql+psycopg://ct:ct@localhost:5432/controltower
+ASV3_AGENT_MODE=real
+ASV3_EMBEDDINGS=huggingface
+ASV3_CHECKPOINTER=postgres
+```
+그리고 `cd api && .venv/bin/python -m uvicorn app.main:app --port 8099`.
 - `ASV3_EMBEDDINGS=huggingface` → 실제 임베딩(`sentence-transformers/all-MiniLM-L6-v2`, 첫 사용 시 모델 다운로드).
   Postgres URL과 함께면 RAG가 **PGVector**로 영속된다.
 - `ASV3_CHECKPOINTER=postgres`(또는 Postgres URL + `auto`) → LangGraph 상태가 **재시작에도 살아남아 resume** 가능.
@@ -182,13 +188,35 @@ docker compose -f docker-compose.db.yml down -v      # 정지 + 데이터 삭제
 cd api && DATABASE_URL="postgresql+psycopg://ct:ct@localhost:5432/controltower" .venv/bin/python seed_demo.py
 ```
 
-### 풀스택 (web + api + db 한 번에)
+### api만 호스트 + db·web는 컨테이너 (`real` 모드 권장 토폴로지)
+
+`real` 모드는 api가 `claude` CLI를 써야 해서 **컨테이너 밖(호스트)**에서 돌아야 하지만, **db와 web은 컨테이너 안에서 돌려도 된다.**
+web 컨테이너는 SPA가 **호스트 api를 직접 호출**하도록 빌드되고(CORS는 `*`로 열려 있음), db는 `localhost:5432`로 노출돼 호스트 api가 붙는다.
+
+```bash
+# 1) db + web 컨테이너 띄우기 (web은 기본적으로 http://localhost:8099 의 api를 호출하도록 빌드)
+docker compose -f docker-compose.hostapi.yml up -d --build
+
+# 2) api는 호스트에서 — 설정은 api/.env 에 (컨테이너 db를 가리키도록):
+#      DATABASE_URL=postgresql+psycopg://ct:ct@localhost:5432/controltower
+#      ASV3_AGENT_MODE=real
+#      ASV3_CHECKPOINTER=postgres
+#      ASV3_WORKSPACE_DIR=/home/you/asv3-projects   # 프로젝트별 레포 루트
+cd api && .venv/bin/python -m uvicorn app.main:app --port 8099
+
+# 3) http://localhost:8080 열기
+```
+- api 포트를 바꾸려면 web 빌드 인자도 맞춰라: `VITE_API_BASE=http://localhost:9000 docker compose -f docker-compose.hostapi.yml up -d --build`.
+- 브라우저가 호스트 api를 못 찾으면(드묾) uvicorn을 `--host 0.0.0.0`으로 띄운다.
+- `ASV3_CHECKPOINTER=postgres`/`ASV3_EMBEDDINGS=huggingface`까지 쓰려면 호스트 venv에 `pip install -e ".[postgres,rag]"`.
+
+### 풀스택 (web + api + db 한 번에 — Claude 불필요, `simulated`)
 
 ```bash
 docker compose up --build      # → http://localhost:8080 (web), http://localhost:8000/docs (api)
 ```
 컨테이너엔 Claude 자격증명이 없어 기본 `simulated` 모드로 돈다. 노브는 `.env`(=`.env.example` 복사)로 조절.
-이 풀스택의 db는 호스트 포트를 열지 않는다(컨테이너끼리 내부 네트워크로 통신) — 호스트에서 붙으려면 위 **DB만 띄우기**를 쓴다.
+이 풀스택의 db는 호스트 포트를 열지 않는다(컨테이너끼리 내부 네트워크로 통신) — 호스트에서 붙으려면 위 **DB만 띄우기**/**api만 호스트** 구성을 쓴다.
 
 ---
 
@@ -198,7 +226,8 @@ docker compose up --build      # → http://localhost:8080 (web), http://localho
 |---|---|---|
 | `DATABASE_URL` | `sqlite+pysqlite:///:memory:` | SQLAlchemy URL. 데모는 `sqlite+pysqlite:///./dev.db` 권장(영속). `postgresql+psycopg://…`면 Postgres |
 | `ASV3_AGENT_MODE` | `simulated` | `simulated`(stub, 쿼터 0) 또는 `real`(`claude -p`) |
-| `ASV3_TARGET_REPO_DIR` | `.` | executor가 step마다 commit하는 **대상 git 레포** 경로 |
+| `ASV3_WORKSPACE_DIR` | `<api>/.asv3-workspace` | **프로젝트별** 대상 레포의 루트. 각 프로젝트는 `{루트}/{project_id}`에서 작업·commit(자동 생성·git init) |
+| `ASV3_TARGET_REPO_DIR` | (미설정) | (legacy) 모든 프로젝트가 공유하는 단일 레포. 설정 시 워크스페이스보다 우선. 프로젝트별 오버라이드는 Objective `data.repo_dir`(최우선) |
 | `ASV3_LLM_WIKI_ROOT` | (미설정) | 프로젝트 완료 시 Decision을 승격할 위키 루트. **미설정이면 승격 skip**(실제 디스크 안 건드림) |
 | `ASV3_EMBEDDINGS` | (미설정) | `huggingface`면 실제 임베딩 모델, 아니면 결정적 offline 임베딩 |
 | `ASV3_CHECKPOINTER` | `auto` | LangGraph 체크포인터: `memory` / `postgres` / `auto`(Postgres URL이면 postgres) |
@@ -250,8 +279,10 @@ docs/
   user-flows-sequence-diagrams.md         모든 사용자 흐름(시퀀스 다이어그램)
   user-flows-e2e-findings.md              E2E 테스트 결과
   defects.md                              결함 레지스트리(상태·근본원인·수정 위치)
-docker-compose.yml                        풀스택(web+api+db)
+docker-compose.yml                        풀스택(web+api+db, simulated)
 docker-compose.db.yml                     DB만(Postgres+pgvector, localhost:5432)
+docker-compose.hostapi.yml                db+web 컨테이너 + api는 호스트(real 모드)
+web/nginx.conf · web/nginx.static.conf    풀스택용(/api 프록시) · 호스트-api용(정적만)
 db/init/01-extensions.sql                 첫 부팅 시 CREATE EXTENSION vector
 .env.example                              docker 노브(.env로 복사)
 ```

@@ -177,6 +177,85 @@ def test_d25_distinct_tickets_get_distinct_code_regions(repo):
     assert any("pcr-b" in cid for cid in crs)
 
 
+def test_workspace_root_gives_each_project_its_own_repo(tmp_path, monkeypatch):
+    """ASV3_WORKSPACE_DIR: each project commits into its OWN {workspace}/{project_id} repo
+    (auto-created), instead of one global ASV3_TARGET_REPO_DIR shared by all projects."""
+    monkeypatch.setenv("ASV3_AGENT_MODE", "simulated")
+    monkeypatch.setenv("ASV3_WORKSPACE_DIR", str(tmp_path))
+    monkeypatch.delenv("ASV3_TARGET_REPO_DIR", raising=False)  # workspace wins anyway
+    init_db()
+    db = SessionLocal()
+    for pid in ("pw1", "pw2"):
+        if db.get(Node, f"{pid}-obj") is None:
+            seed_graph(db, pid, nodes=[{"id": f"{pid}-obj", "kind": "objective", "label": pid}], edges=[])
+    db.close()
+
+    from app.main import app
+
+    c = TestClient(app)
+    for pid in ("pw1", "pw2"):
+        b = c.post(f"/projects/{pid}/tickets/{pid}-t/plan", json={"title": "t"}).json()
+        c.post(f"/projects/{pid}/tickets/{pid}-t/plan/approve", json={"steps": b["awaiting"]["steps"]})
+
+    # each project got its own auto-init'd repo under the workspace root...
+    assert (tmp_path / "pw1" / ".git").is_dir()
+    assert (tmp_path / "pw2" / ".git").is_dir()
+    # ...and the executor wrote into the correct per-project repo
+    assert (tmp_path / "pw1" / "generated" / "pw1-t").is_dir()
+    assert (tmp_path / "pw2" / "generated" / "pw2-t").is_dir()
+
+
+def test_objective_repo_dir_override_wins(tmp_path, monkeypatch):
+    """A project's Objective.data.repo_dir overrides the workspace/env resolution."""
+    monkeypatch.setenv("ASV3_AGENT_MODE", "simulated")
+    monkeypatch.setenv("ASV3_WORKSPACE_DIR", str(tmp_path / "workspace"))
+    custom = tmp_path / "my-existing-repo"
+    init_db()
+    db = SessionLocal()
+    if db.get(Node, "povr-obj") is None:
+        seed_graph(
+            db, "povr",
+            nodes=[{"id": "povr-obj", "kind": "objective", "label": "o", "data": {"repo_dir": str(custom)}}],
+            edges=[],
+        )
+    db.close()
+
+    from app.main import app
+
+    c = TestClient(app)
+    b = c.post("/projects/povr/tickets/povr-t/plan", json={"title": "t"}).json()
+    c.post("/projects/povr/tickets/povr-t/plan/approve", json={"steps": b["awaiting"]["steps"]})
+    assert (custom / "generated" / "povr-t").is_dir()                  # used the override
+    assert not (tmp_path / "workspace" / "povr").exists()              # not the workspace path
+
+
+def test_project_info_and_repo_override_endpoints(monkeypatch):
+    """UI sync: GET /projects/{pid}/info exposes the per-project target repo, and
+    POST /projects/{pid}/repo sets/clears the override (stored on the Objective)."""
+    monkeypatch.setenv("ASV3_AGENT_MODE", "simulated")
+    monkeypatch.setenv("ASV3_WORKSPACE_DIR", "/tmp/ws-test")
+    monkeypatch.delenv("ASV3_TARGET_REPO_DIR", raising=False)
+    init_db()
+    db = SessionLocal()
+    if db.get(Node, "pinfo-obj") is None:
+        seed_graph(db, "pinfo", nodes=[{"id": "pinfo-obj", "kind": "objective", "label": "o"}], edges=[])
+    db.close()
+
+    from app.main import app
+
+    c = TestClient(app)
+    # default resolution = workspace/{pid}
+    r = c.get("/projects/pinfo/info").json()
+    assert r == {"projectId": "pinfo", "repoDir": "/tmp/ws-test/pinfo", "repoSource": "workspace"}
+    # set an override
+    r = c.post("/projects/pinfo/repo", json={"repoDir": "/custom/repo"}).json()
+    assert r["repoDir"] == "/custom/repo" and r["repoSource"] == "override"
+    assert c.get("/projects/pinfo/info").json()["repoDir"] == "/custom/repo"  # persisted
+    # clear -> back to the workspace default
+    r = c.post("/projects/pinfo/repo", json={"repoDir": ""}).json()
+    assert r["repoSource"] == "workspace" and r["repoDir"] == "/tmp/ws-test/pinfo"
+
+
 def test_d11_never_started_ticket_is_not_done(repo):
     """D-11: a ticket that was never planned must report done:false (empty checkpoint
     is 'not started', not 'finished')."""

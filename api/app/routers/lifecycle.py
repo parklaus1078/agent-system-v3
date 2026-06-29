@@ -3,6 +3,8 @@ from __future__ import annotations
 import logging
 import os
 import re
+import subprocess
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
 from langgraph.types import Command
@@ -14,7 +16,14 @@ from ..graph import store
 from ..graph.diff_ingest import apply_step_diff
 from ..git.repo import commit_all, diff_of_commit
 from ..models import Node, Edge
-from ..schemas import LifecycleStateOut, PlanApproveIn, PlanStartIn, ReviewActionIn
+from ..schemas import (
+    LifecycleStateOut,
+    PlanApproveIn,
+    PlanStartIn,
+    ProjectInfoOut,
+    ProjectRepoIn,
+    ReviewActionIn,
+)
 from ..schemas_plan import StepSpec
 from ..services.executor import CliExecutor, SimulatedExecutor
 from ..services.lifecycle_graph import build_graph
@@ -33,8 +42,52 @@ def _mode() -> str:
     return os.environ.get("ASV3_AGENT_MODE", "simulated")
 
 
-def _repo_dir() -> str:
-    return os.environ.get("ASV3_TARGET_REPO_DIR", ".")
+# Default workspace root (under api/) when nothing is configured.
+_DEFAULT_WORKSPACE = Path(__file__).resolve().parents[2] / ".asv3-workspace"
+
+
+def _ensure_git_repo(path: str) -> None:
+    """Make `path` an initialized git repo with at least one commit, so the executor's
+    commits land. Idempotent + cheap (only acts when `.git` is missing); never touches the
+    CWD. An existing repo (e.g. a user's real project) is left untouched."""
+    if not path or path == "." or os.path.isdir(os.path.join(path, ".git")):
+        return
+    try:
+        os.makedirs(path, exist_ok=True)
+        subprocess.run(["git", "init", "-q"], cwd=path, check=False)  # noqa: S607
+        subprocess.run(["git", "config", "user.email", "control-tower@local"], cwd=path, check=False)
+        subprocess.run(["git", "config", "user.name", "Control Tower"], cwd=path, check=False)
+        subprocess.run(["git", "commit", "-q", "--allow-empty", "-m", "init (asv3)"], cwd=path, check=False)
+    except Exception:  # noqa: BLE001 — best-effort; commits degrade gracefully if this fails
+        logger.exception("could not initialize target repo at %s", path)
+
+
+def _resolve_repo_path(db: Session, pid: str) -> tuple[str, str]:
+    """Resolve a project's target repo path (NO side effects) + where it came from.
+    Precedence:
+      1) the Objective's data.repo_dir          (explicit per-project override)
+      2) $ASV3_WORKSPACE_DIR/{project_id}        (workspace root -> one repo per project)
+      3) $ASV3_TARGET_REPO_DIR                   (legacy single global repo; back-compat)
+      4) <api>/.asv3-workspace/{project_id}      (default workspace)"""
+    obj = _objective(db, pid)
+    override = (obj.data or {}).get("repo_dir") if obj else None
+    workspace = os.environ.get("ASV3_WORKSPACE_DIR")
+    legacy = os.environ.get("ASV3_TARGET_REPO_DIR")
+    if override:
+        return str(override), "override"
+    if workspace:
+        return os.path.join(workspace, pid), "workspace"
+    if legacy:
+        return legacy, "legacy"
+    return str(_DEFAULT_WORKSPACE / pid), "default"
+
+
+def _repo_dir(db: Session, pid: str) -> str:
+    """The git repo a project's executor commits into (resolved per-project) — lazily
+    created + git-init'd."""
+    path, _ = _resolve_repo_path(db, pid)
+    _ensure_git_repo(path)
+    return path
 
 
 def _cfg(tid: str) -> dict:
@@ -93,8 +146,6 @@ def _existing_steps(db: Session, pid: str, tid: str) -> list[dict]:
 
 
 def _build(db: Session, pid: str, tid: str, title: str | None = None):
-    repo = _repo_dir()
-
     def on_steps_approved(steps: list[dict]) -> None:
         store.approve_plan(db, pid, tid, [s["label"] for s in steps], title)
 
@@ -102,7 +153,7 @@ def _build(db: Session, pid: str, tid: str, title: str | None = None):
         sid = f"{tid}-s{i + 1}"
         if sha:  # None => executor made no edits; still gate the step, just no diff
             try:
-                apply_step_diff(db, pid, sid, sha, diff_of_commit(repo, sha))
+                apply_step_diff(db, pid, sid, sha, diff_of_commit(_repo_dir(db, pid), sha))
             except Exception:  # git/diff failure must not strand the step un-gated
                 db.rollback()  # discard any partial ingest; the status update below still lands
                 logger.exception("diff ingest failed for step %s (commit %s)", sid, sha)
@@ -203,7 +254,7 @@ def start_plan(pid: str, tid: str, body: PlanStartIn, db: Session = Depends(get_
         {
             "project_id": pid,
             "ticket_id": tid,
-            "repo_dir": _repo_dir(),
+            "repo_dir": _repo_dir(db, pid),
             "objective": obj.label if obj else "",
             "ticket_title": title,
             # re-planning an existing ticket seeds the proposal from its current steps so
@@ -313,3 +364,28 @@ def review_step(pid: str, sid: str, action: ReviewActionIn, db: Session = Depend
 def ticket_state(pid: str, tid: str, db: Session = Depends(get_session)):
     graph = _build(db, pid, tid)
     return _payload(tid, graph.get_state(_cfg(tid)))
+
+
+@router.get("/info", response_model=ProjectInfoOut)
+def project_info(pid: str, db: Session = Depends(get_session)):
+    """The project's resolved target repo (where its executor commits) + its source."""
+    path, source = _resolve_repo_path(db, pid)
+    return {"projectId": pid, "repoDir": path, "repoSource": source}
+
+
+@router.post("/repo", response_model=ProjectInfoOut)
+def set_project_repo(pid: str, body: ProjectRepoIn, db: Session = Depends(get_session)):
+    """Set (or clear) the project's target repo override (stored on its Objective)."""
+    obj = _objective(db, pid)
+    if obj is None:
+        raise HTTPException(404, "project (objective) not found")
+    data = dict(obj.data or {})
+    repo = (body.repoDir or "").strip()
+    if repo:
+        data["repo_dir"] = repo
+    else:
+        data.pop("repo_dir", None)  # cleared -> falls back to workspace/default
+    obj.data = data  # reassign so SQLAlchemy tracks the JSON change
+    db.commit()
+    path, source = _resolve_repo_path(db, pid)
+    return {"projectId": pid, "repoDir": path, "repoSource": source}

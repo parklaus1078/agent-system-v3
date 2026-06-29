@@ -1,0 +1,51 @@
+# Topology: api runs ON THE HOST (it needs the `claude` CLI for real mode); db + web run
+# in containers. The web SPA is built to call the host api directly (CORS is open), and db
+# is published on localhost:5432 so the host api can reach it.
+#
+#   1) bring up db + web:
+#        docker compose -f docker-compose.hostapi.yml up -d --build
+#   2) configure api/.env to point at the containerized db (real mode example):
+#        DATABASE_URL=postgresql+psycopg://ct:ct@localhost:5432/controltower
+#        ASV3_AGENT_MODE=real
+#        ASV3_CHECKPOINTER=postgres
+#        ASV3_TARGET_REPO_DIR=/path/to/your/target-repo
+#      then run the api on the HOST:
+#        cd api && .venv/bin/python -m uvicorn app.main:app --port 8099
+#   3) open http://localhost:8080
+#
+# Host api on a different port? override the build arg, e.g.:
+#   VITE_API_BASE=http://localhost:9000 docker compose -f docker-compose.hostapi.yml up -d --build
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ct}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ct}
+      POSTGRES_DB: ${POSTGRES_DB:-controltower}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ct} -d ${POSTGRES_DB:-controltower}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./web
+      args:
+        # Absolute URL -> the browser (on the host) calls the host api directly.
+        VITE_API_BASE: ${VITE_API_BASE:-http://localhost:8099}
+    ports:
+      - "8080:80"
+    volumes:
+      # static-only nginx (no /api proxy) — the browser talks to the host api, not nginx
+      - ./web/nginx.static.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: unless-stopped
+
+volumes:
+  db-data: # same named volume as docker-compose.yml / docker-compose.db.yml

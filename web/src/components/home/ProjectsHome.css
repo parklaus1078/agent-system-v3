@@ -185,3 +185,39 @@
 .home__bar-label {
   font-size: 9.5px;
 }
+
+/* per-project target repo (synced from the BE: ASV3_WORKSPACE_DIR/{pid} or an override) */
+.home__repo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+.home__repo-label { color: var(--ink-2); font-weight: 600; }
+.home__repo-path { color: var(--ink); word-break: break-all; }
+.home__repo-src {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--ink-2);
+}
+.home__repo-src--override { color: var(--awaiting); border-color: var(--awaiting); }
+.home__repo-input {
+  flex: 1;
+  min-width: 220px;
+  padding: 5px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 12px;
+}
+.home__repo .btn--sm { padding: 4px 10px; height: auto; font-size: 12px; }
+.home__repo .btn--sm:disabled { opacity: 0.5; }

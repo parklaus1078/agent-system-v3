@@ -25,3 +25,8 @@ export interface PlanProposal {
   steps: { label: string; intent: string; acceptance: string }[];
   title?: string; // for a new goal, the label of the ticket to create
 }
+export interface ProjectInfo {
+  projectId: string;
+  repoDir: string; // resolved target repo the project's executor commits into
+  repoSource: 'override' | 'workspace' | 'legacy' | 'default';
+}

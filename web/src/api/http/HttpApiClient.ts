@@ -1,6 +1,6 @@
 import type { ApiClient } from '../ApiClient';
 import type { ProjectGraph } from '../../domain/graph';
-import type { StepDetail, ReviewAction, PlanProposal } from '../dto';
+import type { StepDetail, ReviewAction, PlanProposal, ProjectInfo } from '../dto';
 
 /** The lifecycle-state envelope returned by the plan/approve/review endpoints. */
 interface LifecycleState {
@@ -54,6 +54,14 @@ export class HttpApiClient implements ApiClient {
   }
   async owningPath(id: string): Promise<string[]> {
     return (await this.j<{ path: string[] }>(`/owning-path/${id}`)).path;
+  }
+  getProjectInfo(): Promise<ProjectInfo> {
+    return this.j('/info');
+  }
+  async setProjectRepo(repoDir: string | null): Promise<ProjectInfo> {
+    const info = await this.post<ProjectInfo>('/repo', { repoDir });
+    this.notify();
+    return info;
   }
 
   async proposePlan(target: { goal: string } | { ticketId: string }): Promise<PlanProposal> {

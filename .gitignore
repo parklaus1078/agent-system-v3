@@ -12,6 +12,8 @@ dist/
 *.sqlite
 *.db
 .DS_Store
+# Per-project target repos created by the executor (workspace root)
+.asv3-workspace/
 # Editor
 .idea/
 .vscode/

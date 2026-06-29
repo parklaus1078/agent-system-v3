@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { ticketDisplayStatus } from '../../domain/graph';
+import type { ProjectInfo } from '../../api/dto';
 import { Modal } from '../Modal';
 import { PlanApproval } from '../plan/PlanApproval';
 import { ArrowRightIcon } from '../icons';
@@ -12,12 +13,31 @@ import './ProjectsHome.css';
 export function ProjectsHome({ onOpenProject }: { onOpenProject: () => void }) {
   const graph = useStore((s) => s.graph);
   const load = useStore((s) => s.load);
+  const api = useStore((s) => s.api);
+  const setError = useStore((s) => s.setError);
   const [goal, setGoal] = useState('');
   const [planning, setPlanning] = useState(false);
+  const [info, setInfo] = useState<ProjectInfo | null>(null);
+  const [editingRepo, setEditingRepo] = useState(false);
+  const [repoInput, setRepoInput] = useState('');
 
   useEffect(() => {
     if (!graph) void load();
   }, [graph, load]);
+
+  // The project's target repo (where its executor commits) — a per-project BE value.
+  useEffect(() => {
+    void api.getProjectInfo().then(setInfo, () => {});
+  }, [api]);
+
+  const saveRepo = async () => {
+    try {
+      setInfo(await api.setProjectRepo(repoInput.trim() || null));
+      setEditingRepo(false);
+    } catch (e) {
+      setError(`레포 경로 저장 실패: ${e instanceof Error ? e.message : '알 수 없는 오류'}`);
+    }
+  };
 
   const objective = graph?.nodes.find((n) => n.kind === 'objective');
   const tickets = graph?.nodes.filter((n) => n.kind === 'ticket') ?? [];
@@ -96,6 +116,46 @@ export function ProjectsHome({ onOpenProject }: { onOpenProject: () => void }) {
                 })}
               </div>
             </button>
+          )}
+          {objective && (
+            <div className="home__repo">
+              <span className="home__repo-label">대상 레포</span>
+              {editingRepo ? (
+                <>
+                  <input
+                    className="home__repo-input mono"
+                    aria-label="대상 레포 경로"
+                    placeholder="비우면 워크스페이스 기본값"
+                    value={repoInput}
+                    onChange={(e) => setRepoInput(e.target.value)}
+                  />
+                  <button className="btn btn--primary btn--sm" onClick={saveRepo}>
+                    저장
+                  </button>
+                  <button className="btn btn--ghost btn--sm" onClick={() => setEditingRepo(false)}>
+                    취소
+                  </button>
+                </>
+              ) : (
+                <>
+                  <span className="home__repo-path mono">{info?.repoDir ?? '…'}</span>
+                  {info && (
+                    <span className={`home__repo-src home__repo-src--${info.repoSource}`}>
+                      {info.repoSource === 'override' ? 'custom' : 'auto'}
+                    </span>
+                  )}
+                  <button
+                    className="btn btn--ghost btn--sm"
+                    onClick={() => {
+                      setRepoInput(info?.repoSource === 'override' ? info.repoDir : '');
+                      setEditingRepo(true);
+                    }}
+                  >
+                    편집
+                  </button>
+                </>
+              )}
+            </div>
           )}
         </section>
       </main>
