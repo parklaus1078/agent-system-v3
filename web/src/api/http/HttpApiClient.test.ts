@@ -23,3 +23,20 @@ test('owningPath unwraps the {path} envelope', async () => {
   const api = new HttpApiClient('http://api', 'p1');
   expect(await api.owningPath('cr:x')).toEqual(['cr:x', 's1', 't1', 'obj']);
 });
+
+test('reviewStep POSTs the action and notifies subscribers', async () => {
+  const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true, status: 'done' })));
+  vi.stubGlobal('fetch', fetchMock);
+  const api = new HttpApiClient('http://api', 'p1');
+  let pinged = 0;
+  const unsub = api.subscribe(() => {
+    pinged++;
+  });
+  await api.reviewStep('s4', { kind: 'approve' });
+  unsub();
+  expect(fetchMock).toHaveBeenCalledWith(
+    'http://api/projects/p1/steps/s4/review',
+    expect.objectContaining({ method: 'POST', body: JSON.stringify({ kind: 'approve' }) }),
+  );
+  expect(pinged).toBeGreaterThan(0);
+});

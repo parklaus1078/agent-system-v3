@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { neighbors } from '../../domain/graph';
 import type { PlanProposal } from '../../api/dto';
@@ -29,29 +29,39 @@ export function PlanApproval({
   const [title, setTitle] = useState('');
   const [tag, setTag] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Initialize the editable steps ONCE — not on every live graph reload, which
+  // would otherwise wipe the user's in-progress add/remove/reorder edits.
+  const initialized = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   useEffect(() => {
-    let alive = true;
+    if (initialized.current) return;
     if (ticketId) {
-      const ticket = graph?.nodes.find((n) => n.id === ticketId);
-      const tkSteps = graph ? neighbors(graph, ticketId, 'out').filter((n) => n.kind === 'step') : [];
+      if (!graph) return; // wait until the graph is loaded, then init once
+      const ticket = graph.nodes.find((n) => n.id === ticketId);
+      const tkSteps = neighbors(graph, ticketId, 'out').filter((n) => n.kind === 'step');
       setTitle(ticket?.label ?? '');
       setTag((ticket?.data?.tag as string) ?? null);
       setSteps(tkSteps.map((s) => ({ label: s.label, intent: '', acceptance: '' })));
       setReady(true);
+      initialized.current = true;
     } else if (goal) {
+      initialized.current = true;
       setTitle(goal);
       setTag(null);
       void api.proposePlan(goal).then((p) => {
-        if (alive) {
+        if (mounted.current) {
           setSteps(p.steps);
           setReady(true);
         }
       });
     }
-    return () => {
-      alive = false;
-    };
   }, [api, graph, goal, ticketId]);
 
   const setLabel = (i: number, label: string) =>
