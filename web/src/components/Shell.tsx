@@ -23,7 +23,7 @@ function useElapsedClock(): string {
   return `${hh}:${mm}:${ss}`;
 }
 
-export function Shell() {
+export function Shell({ onHome }: { onHome?: () => void }) {
   const load = useStore((s) => s.load);
   const graph = useStore((s) => s.graph);
   const selectedTicketId = useStore((s) => s.selectedTicketId);
@@ -72,10 +72,12 @@ export function Shell() {
       <h1 className="sr-only">LLM Dev Control Tower</h1>
       <header className="topbar">
         <div className="topbar__brand">
-          <span className="topbar__logo" aria-hidden="true">
-            CT
-          </span>
-          <span className="topbar__title">Control Tower</span>
+          <button className="topbar__home" onClick={onHome} aria-label="프로젝트 목록">
+            <span className="topbar__logo" aria-hidden="true">
+              CT
+            </span>
+            <span className="topbar__title">Control Tower</span>
+          </button>
           {projectName && (
             <>
               <span className="topbar__sep" aria-hidden="true" />

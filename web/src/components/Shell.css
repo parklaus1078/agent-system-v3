@@ -22,6 +22,20 @@
   gap: 9px;
   flex: none;
 }
+.topbar__home {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 -2px;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: inherit;
+}
+.topbar__home:hover {
+  background: var(--surface-3);
+}
 .topbar__logo {
   display: grid;
   place-items: center;

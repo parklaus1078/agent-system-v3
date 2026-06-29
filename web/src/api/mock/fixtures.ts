@@ -6,7 +6,12 @@ import type { ProjectGraph } from '../../domain/graph';
 export function makeFixture(): ProjectGraph {
   return {
     nodes: [
-      { id: 'obj', kind: 'objective', label: '구독 티어 할일앱', data: { short: '구독 할일앱' } },
+      {
+        id: 'obj',
+        kind: 'objective',
+        label: '구독 티어 할일앱',
+        data: { short: '구독 할일앱', description: 'Free / Pro / Team 구독 티어와 기능 게이팅을 갖춘 할 일 관리 앱' },
+      },
       { id: 't-crud', kind: 'ticket', label: '할일 CRUD', status: 'done', data: { tag: 'CRUD' } },
       { id: 't-gate', kind: 'ticket', label: '구독 티어 + 기능 게이팅', status: 'executing', data: { tag: 'GATE' } },
       { id: 's1', kind: 'step', label: '할일 모델 + 저장', status: 'done' },
