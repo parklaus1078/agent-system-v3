@@ -73,10 +73,52 @@ export class MockApiClient implements ApiClient {
   async reviewStep(stepId: string, action: ReviewAction): Promise<void> {
     const node = this.graph.nodes.find((n) => n.id === stepId);
     if (!node) return;
-    if (action.kind === 'approve') node.status = 'done';
-    else if (action.kind === 'changes') node.status = 'executing';
-    else node.status = 'awaiting_review';
+    if (action.kind === 'approve') {
+      node.status = 'done';
+      const next = this.nextPlanningStep(stepId);
+      if (next) {
+        next.status = 'executing'; // the agent picks up the next step (in progress)…
+        this.gateLater(next.id); // …then finishes and stops at its own review gate
+      } else {
+        const ticket = this.ticketOf(stepId);
+        if (ticket) ticket.status = 'done'; // last step approved -> ticket complete
+      }
+    } else if (action.kind === 'changes') {
+      node.status = 'executing'; // re-run the same step
+      this.gateLater(stepId);
+    } else {
+      node.status = 'awaiting_review';
+    }
     this.notify();
+  }
+
+  private ticketOf(stepId: string): GraphNode | undefined {
+    return neighbors(this.graph, stepId, 'in').find((n) => n.kind === 'ticket');
+  }
+
+  private nextPlanningStep(stepId: string): GraphNode | undefined {
+    const ticket = this.ticketOf(stepId);
+    if (!ticket) return undefined;
+    const steps = neighbors(this.graph, ticket.id, 'out').filter((n) => n.kind === 'step');
+    const i = steps.findIndex((s) => s.id === stepId);
+    return steps.slice(i + 1).find((s) => s.status === 'planning');
+  }
+
+  /** Simulate the executor: after a beat the running step stops at its review gate,
+   *  having touched a code region (so it has a reviewable diff) — mirrors the real
+   *  backend lifecycle so the mock UI demonstrates plan -> execute -> review fully. */
+  private gateLater(stepId: string): void {
+    setTimeout(() => {
+      const step = this.graph.nodes.find((n) => n.id === stepId);
+      if (!step || step.status !== 'executing') return; // user moved on; don't clobber
+      step.status = 'awaiting_review';
+      const crId = `cr:mock:${stepId}`;
+      if (!this.graph.nodes.some((n) => n.id === crId)) {
+        this.graph.nodes.push({ id: crId, kind: 'code_region', label: `src/generated/${stepId}.ts` });
+        this.graph.edges.push({ id: `touch:${stepId}`, from: stepId, to: crId, kind: 'touches' });
+      }
+      this.notify();
+    }, 900);
   }
 
   async owningPath(nodeId: string): Promise<string[]> {

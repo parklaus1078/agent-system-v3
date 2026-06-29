@@ -28,6 +28,7 @@ export function PlanApproval({
   const [title, setTitle] = useState('');
   const [tag, setTag] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   // The ticket id the planner resolved to (a new goal mints one) — passed to approve.
   const [planTid, setPlanTid] = useState<string | null>(null);
   // Initialize the editable steps ONCE — not on every live graph reload, which
@@ -50,13 +51,21 @@ export function PlanApproval({
     setTitle(ticket?.label ?? goal ?? '');
     setTag((ticket?.data?.tag as string) ?? null);
     const target = ticketId ? { ticketId } : { goal: goal! };
-    void api.proposePlan(target).then((p) => {
-      if (!mounted.current) return;
-      setPlanTid(p.ticketId);
-      if (p.title) setTitle(p.title);
-      setSteps(p.steps);
-      setReady(true);
-    });
+    api.proposePlan(target).then(
+      (p) => {
+        if (!mounted.current) return;
+        setPlanTid(p.ticketId);
+        if (p.title) setTitle(p.title);
+        setSteps(p.steps);
+        setReady(true);
+      },
+      () => {
+        if (!mounted.current) return;
+        // Don't hang on the loading state forever (e.g. backend unreachable).
+        setError('플랜을 불러오지 못했습니다. 서버 연결을 확인해 주세요.');
+        setReady(true);
+      },
+    );
   }, [api, graph, goal, ticketId]);
 
   const setLabel = (i: number, label: string) =>
@@ -72,7 +81,6 @@ export function PlanApproval({
     });
   const add = () => setSteps((s) => [...s, { label: '새 step', intent: '', acceptance: '' }]);
 
-  const [error, setError] = useState<string | null>(null);
   const approve = async () => {
     setBusy(true);
     setError(null);
