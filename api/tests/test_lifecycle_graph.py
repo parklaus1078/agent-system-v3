@@ -7,6 +7,7 @@ from langgraph.types import Command
 from app.services.planner import SimulatedPlanner
 from app.services.executor import SimulatedExecutor
 from app.services.lifecycle_graph import build_graph
+from app.schemas_plan import StepSpec
 
 
 def _commit(repo: str, msg: str) -> str:
@@ -84,3 +85,40 @@ def test_changes_reruns_same_step(tmp_path):
     # request changes -> re-runs the SAME step (current stays 0)
     graph.invoke(Command(resume={"kind": "changes"}), cfg)
     assert committed == [0, 0]
+
+
+class _CountingPlanner:
+    """Records how many times the planner is invoked (regression guard)."""
+
+    def __init__(self):
+        self.calls = 0
+
+    def propose(self, objective, ticket_title, context):
+        self.calls += 1
+        return [StepSpec(label="only", intent="i", acceptance="a")]
+
+
+def test_planner_runs_exactly_once_across_the_approval_gate(tmp_path):
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.email", "t@t"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.name", "t"], cwd=tmp_path, check=True)
+
+    planner = _CountingPlanner()
+    ex = SimulatedExecutor(lambda repo: Path(repo, "f.ts").write_text("x\n"))
+    graph = build_graph(
+        planner=planner,
+        executor=ex,
+        checkpointer=MemorySaver(),
+        commit_fn=_commit,
+    )
+    cfg = {"configurable": {"thread_id": "ticket:once"}}
+    graph.invoke(
+        {"project_id": "p1", "ticket_id": "t1", "repo_dir": str(tmp_path), "objective": "O",
+         "ticket_title": "T", "steps": [], "current": 0, "decisions": []},
+        cfg,
+    )
+    # the proposal the user sees...
+    proposed = graph.get_state(cfg).interrupts[0].value["steps"]
+    graph.invoke(Command(resume={"approve": True}), cfg)  # ...is the plan that executes
+    assert planner.calls == 1  # NOT re-invoked on resume across the gate
+    assert graph.get_state(cfg).values["steps"] == proposed

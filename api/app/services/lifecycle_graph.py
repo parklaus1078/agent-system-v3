@@ -15,6 +15,7 @@ class TicketState(TypedDict, total=False):
     repo_dir: str
     objective: str
     ticket_title: str
+    proposed: list[dict]   # the proposed plan (computed once, before the approval gate)
     steps: list[dict]      # StepSpec dicts (JSON-serializable for the checkpointer)
     current: int           # index of the step being executed / reviewed
     decisions: list[str]   # decisions accreted across steps
@@ -49,18 +50,25 @@ def build_graph(
 ):
     """Compile the per-ticket lifecycle StateGraph.
 
-    Flow: plan -[approve]-> execute_step -> review -[approve]-> execute_step -> ... -> END.
-    Both `plan` and `review` interrupt() for a human gate; resume via Command(resume=...).
+    Flow: propose -> approve(gate) -> execute_step -> review(gate) -> execute_step -> ... -> END.
+    Both `approve` and `review` interrupt() for a human gate; resume via Command(resume=...).
+    `propose` is a SEPARATE node from `approve` so the (possibly expensive, real-Claude)
+    planner runs exactly ONCE: on resume LangGraph re-runs only the interrupting node, and
+    the proposal is already checkpointed in state — so the executed plan is the approved plan.
     Side effects (planning the graph, committing, ingesting diffs) are injected so the
     graph stays pure and testable with SimulatedPlanner/SimulatedExecutor + MemorySaver.
     """
 
-    def plan(state: TicketState) -> dict:
+    def propose(state: TicketState) -> dict:
         context = "\n".join(state.get("decisions", []))
         proposed = [
             s.model_dump()
             for s in planner.propose(state["objective"], state["ticket_title"], context)
         ]
+        return {"proposed": proposed}
+
+    def approve(state: TicketState) -> dict:
+        proposed = state.get("proposed", [])
         decision = interrupt(
             {"type": "plan_approval", "ticketId": state.get("ticket_id"), "steps": proposed}
         )
@@ -70,7 +78,7 @@ def build_graph(
         on_steps_approved(final)
         return {"steps": final, "current": 0}
 
-    def after_plan(state: TicketState) -> str:
+    def after_approve(state: TicketState) -> str:
         return "execute_step" if state.get("steps") else END
 
     def execute_step(state: TicketState) -> dict:
@@ -103,11 +111,13 @@ def build_graph(
         return "execute_step" if state["current"] < len(state["steps"]) else END
 
     g = StateGraph(TicketState)
-    g.add_node("plan", plan)
+    g.add_node("propose", propose)
+    g.add_node("approve", approve)
     g.add_node("execute_step", execute_step)
     g.add_node("review", review)
-    g.add_edge(START, "plan")
-    g.add_conditional_edges("plan", after_plan, ["execute_step", END])
+    g.add_edge(START, "propose")
+    g.add_edge("propose", "approve")
+    g.add_conditional_edges("approve", after_approve, ["execute_step", END])
     g.add_edge("execute_step", "review")
     g.add_conditional_edges("review", after_review, ["execute_step", END])
     return g.compile(checkpointer=checkpointer)

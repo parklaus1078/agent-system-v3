@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+import re
+import subprocess
 from typing import Protocol
 
 from ..schemas_plan import StepSpec, PlanProposal
@@ -40,3 +43,44 @@ class LangChainPlanner:
         )
         result: PlanProposal = self._llm.invoke(prompt)
         return result.steps
+
+
+class CliPlanner:
+    """Real planner over the agentic CLI (`claude -p`) — uses the SAME auth as the
+    CliExecutor (Claude Code OAuth), so real mode works where there is no
+    ANTHROPIC_API_KEY for the LangChain/API path."""
+
+    def __init__(self, brain: str = "claude", model: str = "claude-opus-4-8"):
+        self.brain, self.model = brain, model
+
+    @staticmethod
+    def _parse(raw: str) -> list[StepSpec]:
+        """Extract the JSON array of steps from CLI stdout (with or without a code fence)."""
+        m = re.search(r"\[.*\]", raw, re.DOTALL)
+        if not m:
+            raise ValueError(f"no JSON array in planner output: {raw[:200]!r}")
+        items = json.loads(m.group(0))
+        return [
+            StepSpec(
+                label=str(it.get("label", "")),
+                intent=str(it.get("intent", "")),
+                acceptance=str(it.get("acceptance", "")),
+            )
+            for it in items
+            if it.get("label")
+        ]
+
+    def propose(self, objective: str, ticket_title: str, context: str) -> list[StepSpec]:
+        prompt = (
+            "Break the ticket into 2-5 small, independently reviewable steps (each = one "
+            "atomic agent action = one commit). Respond with ONLY a JSON array, each element "
+            'an object with keys "label","intent","acceptance". No markdown, no prose.\n\n'
+            f"Objective: {objective}\nTicket: {ticket_title}\n"
+            + (f"Context:\n{context}\n" if context else "")
+        )
+        proc = subprocess.run(  # noqa: S603
+            ["claude", "-p", prompt, "--model", self.model],
+            capture_output=True,
+            text=True,
+        )
+        return self._parse(proc.stdout)

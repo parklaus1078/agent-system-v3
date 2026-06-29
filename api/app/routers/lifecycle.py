@@ -17,7 +17,7 @@ from ..schemas import LifecycleStateOut, PlanApproveIn, PlanStartIn, ReviewActio
 from ..schemas_plan import StepSpec
 from ..services.executor import CliExecutor, SimulatedExecutor
 from ..services.lifecycle_graph import build_graph
-from ..services.planner import LangChainPlanner, SimulatedPlanner
+from ..services.planner import CliPlanner, LangChainPlanner, SimulatedPlanner
 from ..services.prompt_build import build_step_prompt
 
 router = APIRouter(prefix="/projects/{pid}", tags=["lifecycle"])
@@ -63,9 +63,10 @@ def _build(db: Session, pid: str, tid: str, title: str | None = None):
     def on_steps_approved(steps: list[dict]) -> None:
         store.approve_plan(db, pid, tid, [s["label"] for s in steps], title)
 
-    def on_step_committed(i: int, sha: str, summary: str, decision: str | None) -> None:
+    def on_step_committed(i: int, sha: str | None, summary: str, decision: str | None) -> None:
         sid = f"{tid}-s{i + 1}"
-        apply_step_diff(db, pid, sid, sha, diff_of_commit(repo, sha))
+        if sha:  # None => executor made no edits; still gate the step, just no diff
+            apply_step_diff(db, pid, sid, sha, diff_of_commit(repo, sha))
         node = db.get(Node, sid)
         if node is not None:
             node.status = "awaiting_review"
@@ -83,8 +84,14 @@ def _build(db: Session, pid: str, tid: str, title: str | None = None):
         return build_step_prompt(db, pid, tid, StepSpec(**step))
 
     if _mode() == "real":
-        planner = LangChainPlanner()
-        executor = CliExecutor(brain=os.environ.get("ASV3_BRAIN", "claude"))
+        brain = os.environ.get("ASV3_BRAIN", "claude")
+        # ChatAnthropic needs ANTHROPIC_API_KEY; without it, route planning through the
+        # CLI (same Claude Code OAuth as the executor) so real mode still reaches Claude.
+        if os.environ.get("ANTHROPIC_API_KEY"):
+            planner = LangChainPlanner()
+        else:
+            planner = CliPlanner(brain=brain)
+        executor = CliExecutor(brain=brain)
     else:
         planner = SimulatedPlanner()
         executor = SimulatedExecutor(_sim_write)
@@ -100,16 +107,19 @@ def _build(db: Session, pid: str, tid: str, title: str | None = None):
     )
 
 
+def _awaiting(snap):
+    return snap.interrupts[0].value if snap.interrupts else None
+
+
 def _payload(tid: str, snap) -> dict:
     vals = snap.values or {}
-    interrupts = snap.interrupts
     return {
         "ticketId": tid,
         "next": list(snap.next),
         "done": not snap.next,
         "current": vals.get("current"),
         "steps": vals.get("steps", []),
-        "awaiting": interrupts[0].value if interrupts else None,
+        "awaiting": _awaiting(snap),
     }
 
 
@@ -118,7 +128,8 @@ def start_plan(pid: str, tid: str, body: PlanStartIn, db: Session = Depends(get_
     graph = _build(db, pid, tid, title=body.title)
     cfg = _cfg(tid)
     snap = graph.get_state(cfg)
-    if snap.next and "plan" in snap.next:
+    awaiting = _awaiting(snap)
+    if awaiting and awaiting.get("type") == "plan_approval":
         return _payload(tid, snap)  # already proposed; return the pending plan
 
     obj = _objective(db, pid)
@@ -155,7 +166,8 @@ def approve_plan(pid: str, tid: str, body: PlanApproveIn, db: Session = Depends(
     graph = _build(db, pid, tid)
     cfg = _cfg(tid)
     snap = graph.get_state(cfg)
-    if not (snap.next and "plan" in snap.next):
+    awaiting = _awaiting(snap)
+    if not (awaiting and awaiting.get("type") == "plan_approval"):
         raise HTTPException(409, "no plan awaiting approval; call /plan first")
     resume = {"approve": True}
     if body.steps is not None:
@@ -170,7 +182,8 @@ def review_step(pid: str, sid: str, action: ReviewActionIn, db: Session = Depend
     graph = _build(db, pid, tid)
     cfg = _cfg(tid)
     snap = graph.get_state(cfg)
-    if not (snap.next and "review" in snap.next):
+    awaiting = _awaiting(snap)
+    if not (awaiting and awaiting.get("type") == "review"):
         raise HTTPException(409, "no step awaiting review")
     graph.invoke(Command(resume={"kind": action.kind, "comment": action.comment}), cfg)
     snap = graph.get_state(cfg)

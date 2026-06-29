@@ -23,6 +23,10 @@ def build_step_prompt(
     owned = [n.label for n in neighbors(db, project_id, ticket_id, "out") if n.kind == "code_region"]
     decisions = [n.label for n in neighbors(db, project_id, ticket_id, "out") if n.kind == "decision"]
     parts = [
+        "# Task\nYou are an autonomous coding agent working in the current git repository. "
+        "Implement ONLY the step below by creating and editing the necessary files NOW. Make "
+        "concrete, minimal code changes — actually write the files, do not just describe a plan. "
+        "Keep changes scoped to this step. When the edits are done, stop.",
         f"# Objective (pinned)\n{_objective(db, project_id)}",
         f"# Ticket\n{ticket.label if ticket else ticket_id}",
         f"# Step\n{step.intent}\nAcceptance: {step.acceptance}",

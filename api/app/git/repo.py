@@ -15,8 +15,13 @@ def _git(repo_dir: str, *args: str) -> str:
     ).stdout
 
 
-def commit_all(repo_dir: str, message: str) -> str:
+def commit_all(repo_dir: str, message: str) -> str | None:
+    """Stage + commit everything. Returns the new commit sha, or None when the working
+    tree had no changes (the executor made no edits) — so a no-op step degrades to an
+    empty review gate instead of crashing the lifecycle on git's 'nothing to commit'."""
     _git(repo_dir, "add", "-A")
+    if not _git(repo_dir, "status", "--porcelain").strip():
+        return None
     _git(repo_dir, "commit", "-q", "-m", message)
     return _git(repo_dir, "rev-parse", "HEAD").strip()
 
