@@ -1,14 +1,14 @@
-import { useState } from 'react';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import { Shell } from './components/Shell';
 import { ProjectsHome } from './components/home/ProjectsHome';
 
+/** Path-routed: "/" = projects landing (home), "/project/:pid" = that project's map/cockpit. */
 export default function App() {
-  // Boots into the project (Navigator), as the wireframe does; the Control Tower
-  // brand opens the project-management home, and a project card re-enters it.
-  const [view, setView] = useState<'home' | 'project'>('project');
-  return view === 'home' ? (
-    <ProjectsHome onOpenProject={() => setView('project')} />
-  ) : (
-    <Shell onHome={() => setView('home')} />
+  return (
+    <Routes>
+      <Route path="/" element={<ProjectsHome />} />
+      <Route path="/project/:pid" element={<Shell />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }

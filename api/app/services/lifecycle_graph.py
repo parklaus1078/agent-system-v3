@@ -29,12 +29,17 @@ class TicketState(TypedDict, total=False):
 
 # Callback signatures (the API layer injects DB/git-backed implementations):
 StepsApproved = Callable[[list[dict]], None]
+StepStart = Callable[[int, int], None]            # (index, total) — about to execute a step
 StepCommitted = Callable[[int, Optional[str], str, Optional[str], bool], None]
 CommitFn = Callable[[str, str], str]              # (repo_dir, message) -> sha
 BuildPrompt = Callable[[TicketState, dict], str]  # (state, step) -> prompt
 
 
 def _noop_steps(steps: list[dict]) -> None:  # pragma: no cover - trivial default
+    return None
+
+
+def _noop_start(i: int, total: int) -> None:  # pragma: no cover - trivial default
     return None
 
 
@@ -49,6 +54,7 @@ def build_graph(
     checkpointer,
     commit_fn: CommitFn,
     on_steps_approved: StepsApproved = _noop_steps,
+    on_step_start: StepStart = _noop_start,
     on_step_committed: StepCommitted = _noop_committed,
     build_prompt: Optional[BuildPrompt] = None,
 ):
@@ -93,6 +99,7 @@ def build_graph(
     def execute_step(state: TicketState) -> dict:
         i = state["current"]
         step = state["steps"][i]
+        on_step_start(i, len(state["steps"]))  # mark "executing step i+1/n" before the (slow) run
         prompt = build_prompt(state, step) if build_prompt else step.get("intent", "")
         res = executor.run(state["repo_dir"], prompt)
         logger.info(

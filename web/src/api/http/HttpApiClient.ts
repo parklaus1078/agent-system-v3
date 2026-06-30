@@ -1,6 +1,14 @@
 import type { ApiClient } from '../ApiClient';
 import type { ProjectGraph } from '../../domain/graph';
-import type { StepDetail, ReviewAction, PlanProposal, ProjectInfo } from '../dto';
+import type {
+  StepDetail,
+  ReviewAction,
+  PlanProposal,
+  ProjectInfo,
+  ProjectSummary,
+  ProjectProposal,
+  ProjectCreated,
+} from '../dto';
 
 /** The lifecycle-state envelope returned by the plan/approve/review endpoints. */
 interface LifecycleState {
@@ -21,6 +29,39 @@ export class HttpApiClient implements ApiClient {
     private base: string,
     private pid: string,
   ) {}
+
+  setPid(pid: string): void {
+    this.pid = pid;
+  }
+
+  async listProjects(): Promise<ProjectSummary[]> {
+    const r = await fetch(`${this.base}/projects`);
+    if (!r.ok) throw new Error(`${r.status} /projects`);
+    return r.json() as Promise<ProjectSummary[]>;
+  }
+
+  // Project-level planning is NOT pid-scoped (it creates the project), so it posts to the
+  // bare /projects/* endpoints rather than url()'s /projects/{pid}/* prefix.
+  async proposeProject(goal: string): Promise<ProjectProposal> {
+    const r = await fetch(`${this.base}/projects/plan`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ goal }),
+    });
+    if (!r.ok) throw new Error(`${r.status} /projects/plan`);
+    return r.json() as Promise<ProjectProposal>;
+  }
+  async approveProject(proposal: ProjectProposal): Promise<ProjectCreated> {
+    const r = await fetch(`${this.base}/projects/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(proposal),
+    });
+    if (!r.ok) throw new Error(`${r.status} /projects/approve`);
+    const created = (await r.json()) as ProjectCreated;
+    this.notify(); // a new project appears in the landing list
+    return created;
+  }
 
   private url(path: string): string {
     return `${this.base}/projects/${this.pid}${path}`;
@@ -54,6 +95,10 @@ export class HttpApiClient implements ApiClient {
   }
   async owningPath(id: string): Promise<string[]> {
     return (await this.j<{ path: string[] }>(`/owning-path/${id}`)).path;
+  }
+  async saveLayout(positions: Record<string, { x: number; y: number }>): Promise<void> {
+    await this.post('/layout', { positions });
+    this.notify(); // the new positions come back on the next /graph poll
   }
   getProjectInfo(): Promise<ProjectInfo> {
     return this.j('/info');

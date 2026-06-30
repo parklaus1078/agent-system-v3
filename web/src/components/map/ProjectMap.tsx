@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -12,6 +12,7 @@ import '@xyflow/react/dist/style.css';
 import { useStore } from '../../store/useStore';
 import {
   neighbors,
+  nodeActivity,
   ticketDisplayStatus,
   type ProjectGraph,
   type GraphNode,
@@ -83,10 +84,31 @@ export interface ProjectMapProps {
 
 function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
   const graph = useStore((s) => s.graph);
+  const api = useStore((s) => s.api);
   const selectTicket = useStore((s) => s.selectTicket);
   const editPlan = useStore((s) => s.editPlan);
   const [showCode, setShowCode] = useState(false);
   const [showSteps, setShowSteps] = useState(false);
+  // Positions of nodes the user has dragged this session. They override the auto-layout
+  // immediately (no snap-back) while the save round-trips; the server then echoes them as
+  // data.pos on the next /graph poll so they survive reload / another machine.
+  const [localPos, setLocalPos] = useState<Record<string, { x: number; y: number }>>({});
+  const pending = useRef<Record<string, { x: number; y: number }>>({});
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flushSave = () => {
+    const batch = pending.current;
+    pending.current = {};
+    if (Object.keys(batch).length) void api.saveLayout(batch);
+  };
+  // flush any pending drag on unmount (e.g. navigating away right after dropping)
+  useEffect(() => () => flushSave(), []); // eslint-disable-line react-hooks/exhaustive-deps
+  const onNodeDragStop = (_: unknown, node: Node) => {
+    const p = { x: node.position.x, y: node.position.y };
+    setLocalPos((m) => ({ ...m, [node.id]: p }));
+    pending.current[node.id] = p;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(flushSave, 500); // debounce a burst of drags into one POST
+  };
 
   const active = !!highlightIds && highlightIds.length > 0;
   const dim = (id: string) => (active ? !highlightIds!.includes(id) : false);
@@ -117,6 +139,20 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
     const centerOf = (id: string) => (pos.get(id)?.x ?? 0) + TICKET_W / 2;
     tickets.forEach((t, i) => pos.set(t.id, { x: startX + i * col, y: ROW_TICKET }));
     if (objective) pos.set(objective.id, { x: -OBJ_W / 2, y: 0 });
+
+    // Drag overrides: a session-local drop, else the persisted data.pos. Applied to
+    // tickets/objective NOW so their children (laid out relative to centerOf below) follow
+    // a moved ticket; re-applied to every node after, so dragged children win too.
+    const override = (n: GraphNode): { x: number; y: number } | undefined => {
+      const p = (localPos[n.id] ?? (n.data?.pos as { x: number; y: number } | undefined)) || undefined;
+      return p && Number.isFinite(p.x) && Number.isFinite(p.y) ? { x: p.x, y: p.y } : undefined;
+    };
+    const applyOverrides = (ns: GraphNode[]) =>
+      ns.forEach((n) => {
+        const p = override(n);
+        if (p) pos.set(n.id, p);
+      });
+    applyOverrides([objective, ...tickets].filter(Boolean) as GraphNode[]);
 
     // steps stacked under their owning ticket (Step layer); the rows below shift down by
     // the tallest ticket's step block so nothing overlaps.
@@ -151,6 +187,9 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
       pos.set(c.id, { x: (owner ? centerOf(owner) : 0) - CODE_W / 2, y: baseY + idx * CODE_STEP });
     });
 
+    // node-level drag overrides win over the auto-layout for every node (e.g. a dragged step)
+    applyOverrides(graph.nodes);
+
     const visible = new Set<string>();
     if (objective) visible.add(objective.id);
     tickets.forEach((t) => visible.add(t.id));
@@ -165,7 +204,7 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
         type: 'objective',
         position: pos.get(objective.id)!,
         data: { label: objective.label, live: true },
-        draggable: false,
+        draggable: true,
         selectable: false,
       });
     tickets.forEach((t) => {
@@ -181,9 +220,10 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
           done: meta.done,
           total: meta.total,
           hint: meta.hint,
+          activity: nodeActivity(t),
           dimmed: dim(t.id),
         },
-        draggable: false,
+        draggable: true,
         selectable: true, // tickets receive pointer events (others stay inert)
       });
     });
@@ -201,7 +241,7 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
           index: idx + 1,
           dimmed: dim(s.id),
         },
-        draggable: false,
+        draggable: true,
         selectable: false,
       });
     });
@@ -211,7 +251,7 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
         type: 'decision',
         position: pos.get(d.id)!,
         data: { label: d.label, dimmed: dim(d.id) },
-        draggable: false,
+        draggable: true,
         selectable: false,
       }),
     );
@@ -222,7 +262,7 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
           type: c.kind === 'test' ? 'test' : 'code_region',
           position: pos.get(c.id)!,
           data: { label: c.label, dimmed: dim(c.id) },
-          draggable: false,
+          draggable: true,
           selectable: false,
         }),
       );
@@ -279,7 +319,7 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
     }
 
     return { nodes: rfNodes, edges: rfEdges, banner: bannerTag };
-  }, [graph, effectiveShowCode, showSteps, highlightIds]);
+  }, [graph, effectiveShowCode, showSteps, highlightIds, localPos]);
 
   return (
     <ReactFlow
@@ -290,8 +330,9 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
       fitViewOptions={{ padding: 0.26, maxZoom: 0.9 }}
       minZoom={0.4}
       maxZoom={1.5}
-      nodesDraggable={false}
+      nodesDraggable
       nodesConnectable={false}
+      onNodeDragStop={onNodeDragStop}
       onNodeClick={(_, node) => {
         if (node.type !== 'ticket' || !graph) return;
         // a planning ticket opens its plan editor; others open the cockpit

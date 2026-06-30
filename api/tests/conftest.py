@@ -1,9 +1,16 @@
+import os
+
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.db import Base
+# Execution runs in-request (synchronous) under test by default, so assertions can read the
+# resulting state right after the call. The async (background-thread) path is exercised
+# explicitly by test_lifecycle_async.py, which flips this on for its duration.
+os.environ["ASV3_ASYNC_EXEC"] = "0"
+
+from app.db import Base  # noqa: E402
 
 
 @pytest.fixture()

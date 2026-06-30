@@ -7,12 +7,26 @@ export type NodeKind = 'objective' | 'ticket' | 'step' | 'code_region' | 'test' 
 export type EdgeKind = 'has' | 'subdivides' | 'touches' | 'tested_by' | 'decided' | 'produced';
 export type Status = 'planning' | 'executing' | 'awaiting_review' | 'done' | 'blocked';
 
+/** Coarse "what the backend is doing now", written by the lifecycle at each transition
+ *  and read live via getGraph polling (see Phase 3). Lives on the ticket node's data. */
+export interface NodeActivity {
+  state: 'planning' | 'executing' | 'awaiting_review' | 'blocked' | 'done';
+  detail?: string; // e.g. "step 2/5"
+  since?: string; // ISO timestamp the state was entered (for an elapsed counter)
+}
+
 export interface GraphNode {
   id: string;
   kind: NodeKind;
   label: string;
   status?: Status;
   data?: Record<string, unknown>;
+}
+
+/** The node's live activity, if any (typed read of `data.activity`). */
+export function nodeActivity(n: GraphNode | undefined): NodeActivity | undefined {
+  const a = n?.data?.activity as NodeActivity | undefined;
+  return a && a.state ? a : undefined;
 }
 export interface GraphEdge {
   id: string;

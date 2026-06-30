@@ -1,0 +1,33 @@
+.activity {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent, #2563eb);
+  background: color-mix(in srgb, var(--accent, #2563eb) 12%, transparent);
+  white-space: nowrap;
+}
+.activity--compact {
+  padding: 2px;
+  background: transparent;
+}
+.activity__text {
+  line-height: 1;
+}
+.activity__spin {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--accent, #2563eb) 35%, transparent);
+  border-top-color: var(--accent, #2563eb);
+  animation: activity-spin 0.7s linear infinite;
+  flex: none;
+}
+@keyframes activity-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

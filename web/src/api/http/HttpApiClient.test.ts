@@ -79,3 +79,38 @@ test('reviewStep POSTs the action and notifies subscribers', async () => {
   );
   expect(pinged).toBeGreaterThan(0);
 });
+
+test('saveLayout POSTs positions to the per-project layout endpoint and notifies', async () => {
+  const fetchMock = vi.fn(async () => new Response(JSON.stringify({ updated: 1 })));
+  vi.stubGlobal('fetch', fetchMock);
+  const api = new HttpApiClient('http://api', 'p1');
+  let pinged = 0;
+  const unsub = api.subscribe(() => {
+    pinged++;
+  });
+  await api.saveLayout({ t1: { x: 5, y: 6 } });
+  unsub();
+  expect(fetchMock).toHaveBeenCalledWith(
+    'http://api/projects/p1/layout',
+    expect.objectContaining({ method: 'POST', body: JSON.stringify({ positions: { t1: { x: 5, y: 6 } } }) }),
+  );
+  expect(pinged).toBeGreaterThan(0);
+});
+
+test('proposeProject / approveProject hit the top-level (not pid-scoped) project endpoints', async () => {
+  const fetchMock = vi.fn(async (url: string) =>
+    url.endsWith('/projects/plan')
+      ? new Response(JSON.stringify({ slug: 's', title: 't', tickets: [{ title: 'T' }] }))
+      : new Response(JSON.stringify({ projectId: 's', title: 't', tickets: 1, created: true })),
+  );
+  vi.stubGlobal('fetch', fetchMock);
+  const api = new HttpApiClient('http://api', 'p1');
+  const prop = await api.proposeProject('build a thing');
+  expect(fetchMock).toHaveBeenCalledWith(
+    'http://api/projects/plan',
+    expect.objectContaining({ method: 'POST', body: JSON.stringify({ goal: 'build a thing' }) }),
+  );
+  const created = await api.approveProject(prop);
+  expect(fetchMock).toHaveBeenCalledWith('http://api/projects/approve', expect.objectContaining({ method: 'POST' }));
+  expect(created.created).toBe(true);
+});

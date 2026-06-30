@@ -23,6 +23,101 @@ def seed_graph(db: Session, project_id: str, nodes: list[dict], edges: list[dict
     db.commit()
 
 
+def unique_slug(db: Session, base: str) -> str:
+    """A project id free in the DB: `base`, else `base-2`, `base-3`, … (collision-safe)."""
+    base = base or "project"
+    if db.get(Node, base) is None:
+        return base
+    i = 2
+    while db.get(Node, f"{base}-{i}") is not None:
+        i += 1
+    return f"{base}-{i}"
+
+
+def create_project(
+    db: Session,
+    slug: str,
+    title: str,
+    tickets: list[dict],
+    description: str | None = None,
+) -> dict:
+    """Create a project = Objective(id=slug) + its tickets (status=planning, no steps yet)
+    + `has` edges, in one transaction. Idempotent: if `slug` is already an Objective, this
+    is a no-op merge (returns the existing summary, created=False) so a re-submit can't
+    duplicate. Tickets are decomposed into steps later via the ticket planner (Part B)."""
+    existing = db.get(Node, slug)
+    if existing is not None and existing.kind == "objective":
+        n = len(
+            db.scalars(
+                select(Node).where(Node.project_id == slug, Node.kind == "ticket")
+            ).all()
+        )
+        return {"projectId": slug, "title": existing.label, "tickets": n, "created": False}
+
+    db.add(
+        Node(
+            id=slug,
+            project_id=slug,
+            kind="objective",
+            label=title,
+            data={"description": description} if description else {},
+        )
+    )
+    created = 0
+    for i, t in enumerate(tickets):
+        tid = f"{slug}-t{i + 1}"
+        data = {"intent": t["intent"]} if t.get("intent") else {}
+        db.add(
+            Node(id=tid, project_id=slug, kind="ticket", label=t["title"], status="planning", data=data)
+        )
+        db.add(Edge(id=f"has-{tid}", project_id=slug, src=slug, dst=tid, kind="has"))
+        created += 1
+    db.commit()
+    return {"projectId": slug, "title": title, "tickets": created, "created": True}
+
+
+def list_projects(db: Session) -> list[dict]:
+    """One summary row per project (= per Objective node) for the landing page."""
+    objectives = db.scalars(select(Node).where(Node.kind == "objective")).all()
+    out: list[dict] = []
+    for o in objectives:
+        tickets = db.scalars(
+            select(Node).where(Node.project_id == o.project_id, Node.kind == "ticket")
+        ).all()
+        steps = db.scalars(
+            select(Node).where(Node.project_id == o.project_id, Node.kind == "step")
+        ).all()
+        out.append(
+            {
+                "projectId": o.project_id,  # the route param (/project/{projectId})
+                "title": o.label,
+                "description": (o.data or {}).get("description"),
+                "tickets": len(tickets),
+                "steps": len(steps),
+                "awaiting": sum(1 for s in steps if s.status == "awaiting_review"),
+            }
+        )
+    return out
+
+
+def save_layout(db: Session, project_id: str, positions: dict[str, dict]) -> int:
+    """Persist map node positions (drag&drop) as each node's `data.pos = {x, y}`, per
+    project. Ignores unknown/foreign node ids and malformed coords. Returns #updated."""
+    updated = 0
+    for node_id, p in positions.items():
+        node = db.get(Node, node_id)
+        if node is None or node.project_id != project_id:
+            continue
+        try:
+            x, y = float(p["x"]), float(p["y"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        node.data = {**(node.data or {}), "pos": {"x": x, "y": y}}
+        updated += 1
+    db.commit()
+    return updated
+
+
 def get_graph(db: Session, project_id: str) -> dict:
     nodes = db.scalars(select(Node).where(Node.project_id == project_id)).all()
     edges = db.scalars(select(Edge).where(Edge.project_id == project_id)).all()

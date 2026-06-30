@@ -12,6 +12,7 @@ export type Mode = 'navigator' | 'cockpit';
 
 interface State {
   api: ApiClient;
+  pid: string; // current project id (from the /project/:pid route)
   graph: ProjectGraph | null;
   online: boolean; // is the backend reachable (drives the live/offline indicator)
   error: string | null; // transient error to surface as a toast (e.g. a failed write)
@@ -21,6 +22,7 @@ interface State {
   reviewOpen: boolean; // full-screen review gate overlay
   planTicketId: string | null; // ticket whose plan is being edited (planning tickets)
   load: () => Promise<void>;
+  setPid: (pid: string) => void; // switch project (route-driven)
   setError: (msg: string | null) => void;
   setMode: (mode: Mode) => void;
   selectTicket: (id: string | null) => void;
@@ -56,6 +58,7 @@ export const useStore = create<State>()(
       });
       return {
         api,
+        pid: 'p1',
         graph: null,
         online: true,
         error: null,
@@ -80,6 +83,12 @@ export const useStore = create<State>()(
             // rejection, no silent stale "live" badge).
             if (get().online) set({ online: false });
           }
+        },
+        setPid: (pid) => {
+          if (get().pid === pid && get().graph) return;
+          api.setPid(pid);
+          set({ pid, graph: null, selectedTicketId: null, selectedStepId: null, reviewOpen: false });
+          void get().load();
         },
         setError: (error) => set({ error }),
         setMode: (mode) => set({ mode }),

@@ -4,6 +4,8 @@ import logging
 import os
 import re
 import subprocess
+import threading
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -11,7 +13,7 @@ from langgraph.types import Command
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..db import get_session, make_checkpointer
+from ..db import SessionLocal, get_session, make_checkpointer
 from ..graph import store
 from ..graph.diff_ingest import apply_step_diff, parse_diff
 from ..git.repo import commit_all, diff_of_commit
@@ -37,9 +39,47 @@ logger = logging.getLogger("asv3.lifecycle")
 
 _REVIEW_STATUS = {"approve": "done", "changes": "executing", "takeover": "awaiting_review"}
 
+# Serializes the (rare, single-user) concurrent access to the shared LangGraph checkpointer
+# — a background execution invoke vs. another user action. The live UI poll hits getGraph
+# (the DB graph, incl. `data.activity`), NOT the checkpointer, so polling never waits here.
+_GRAPH_LOCK = threading.RLock()
+# Background execution threads — tracked only so tests can deterministically join them
+# (pruned of finished threads on each spawn so it doesn't grow unbounded in production).
+_BG_THREADS: list[threading.Thread] = []
+
 
 def _mode() -> str:
     return os.environ.get("ASV3_AGENT_MODE", "simulated")
+
+
+def _async_enabled() -> bool:
+    """Run the (slow, real-Claude) execution in a background thread so the request returns
+    immediately and the UI tracks progress via `data.activity` polling. Tests/sync callers
+    set ASV3_ASYNC_EXEC=0 for deterministic, in-request execution."""
+    return os.environ.get("ASV3_ASYNC_EXEC", "1").lower() not in ("0", "false", "no")
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _set_activity(db: Session, pid: str, tid: str, state: str | None, detail: str = "") -> None:
+    """Record coarse 'what the backend is doing now' on the ticket node (read live by the
+    UI's getGraph poll). state=None clears it. Tolerates a not-yet-created ticket."""
+    t = db.get(Node, tid)
+    if t is None:
+        return
+    data = dict(t.data or {})
+    if state is None:
+        data.pop("activity", None)
+    else:
+        data["activity"] = {"state": state, "detail": detail, "since": _now_iso()}
+    t.data = data
+    db.commit()
+
+
+def _total_steps(db: Session, pid: str, tid: str) -> int:
+    return sum(1 for n in store.neighbors(db, pid, tid, "out") if n.kind == "step")
 
 
 # Default workspace root (under api/) when nothing is configured.
@@ -150,6 +190,11 @@ def _existing_steps(db: Session, pid: str, tid: str) -> list[dict]:
 def _build(db: Session, pid: str, tid: str, title: str | None = None):
     def on_steps_approved(steps: list[dict]) -> None:
         store.approve_plan(db, pid, tid, [s["label"] for s in steps], title)
+        # execution begins next — surface it immediately so the board isn't a frozen blank.
+        _set_activity(db, pid, tid, "executing", f"step 1/{len(steps)}")
+
+    def on_step_start(i: int, total: int) -> None:
+        _set_activity(db, pid, tid, "executing", f"step {i + 1}/{total}")
 
     def on_step_committed(
         i: int, sha: str | None, summary: str, decision: str | None, ok: bool = True
@@ -171,6 +216,12 @@ def _build(db: Session, pid: str, tid: str, title: str | None = None):
             # a failed/no-op executor must NOT masquerade as a clean awaiting_review gate
             node.status = "awaiting_review" if ok else "blocked"
             node.data = {**(node.data or {}), "summary": summary, "diff": diff_blobs, "ok": ok}
+        total = _total_steps(db, pid, tid) or (i + 1)
+        _set_activity(
+            db, pid, tid,
+            "awaiting_review" if ok else "blocked",
+            f"step {i + 1}/{total} {'리뷰 대기' if ok else '실패'}",
+        )
         logger.info(
             "step committed: %s ok=%s sha=%s files=%d", sid, ok, (sha or "-")[:8], len(diff_blobs)
         )
@@ -212,9 +263,40 @@ def _build(db: Session, pid: str, tid: str, title: str | None = None):
         checkpointer=make_checkpointer(),
         commit_fn=commit_all,
         on_steps_approved=on_steps_approved,
+        on_step_start=on_step_start,
         on_step_committed=on_step_committed,
         build_prompt=build_prompt,
     )
+
+
+def _invoke_async(pid: str, tid: str, title: str | None, resume: dict, after=None) -> None:
+    """Run a (possibly long) graph resume in a background daemon thread so the HTTP request
+    returns immediately. Uses its OWN DB session (sessions aren't thread-safe) and serializes
+    the shared checkpointer behind _GRAPH_LOCK. `after(db2)` runs post-invoke (e.g. mark the
+    ticket done / promote) in the same worker session."""
+
+    def worker() -> None:
+        db2 = SessionLocal()
+        try:
+            graph = _build(db2, pid, tid, title=title)
+            with _GRAPH_LOCK:
+                graph.invoke(Command(resume=resume), _cfg(tid))
+                snap = graph.get_state(_cfg(tid))
+            if after is not None:
+                after(db2, snap)
+        except Exception:  # never crash the worker thread silently
+            logger.exception("async graph invoke failed (pid=%s tid=%s)", pid, tid)
+            try:
+                _set_activity(db2, pid, tid, "blocked", "실행 중 오류")
+            except Exception:
+                logger.exception("could not record async-failure activity")
+        finally:
+            db2.close()
+
+    th = threading.Thread(target=worker, daemon=True, name=f"exec:{tid}")
+    _BG_THREADS[:] = [t for t in _BG_THREADS if t.is_alive()]  # prune finished
+    _BG_THREADS.append(th)
+    th.start()
 
 
 def _awaiting(snap):
@@ -241,7 +323,8 @@ def _payload(tid: str, snap) -> dict:
 def start_plan(pid: str, tid: str, body: PlanStartIn, db: Session = Depends(get_session)):
     graph = _build(db, pid, tid, title=body.title)
     cfg = _cfg(tid)
-    snap = graph.get_state(cfg)
+    with _GRAPH_LOCK:
+        snap = graph.get_state(cfg)
     awaiting = _awaiting(snap)
     if awaiting and awaiting.get("type") == "plan_approval":
         return _payload(tid, snap)  # already proposed; return the pending plan
@@ -253,31 +336,40 @@ def start_plan(pid: str, tid: str, body: PlanStartIn, db: Session = Depends(get_
     obj = _objective(db, pid)
     existing = db.get(Node, tid)
     title = body.title or (existing.label if existing else tid)
+    # Surface "planning" on an existing (project-init) ticket so the map/board shows the
+    # PLAN agent is working — the proposal itself stays synchronous (the modal spinner).
+    _set_activity(db, pid, tid, "planning", "계획 수립 중")
     # Do NOT persist the ticket here. The proposed plan lives in the LangGraph checkpoint
     # (thread_id ticket:{tid}); store.approve_plan creates the ticket (and the project's
     # Objective if missing) only on approval. So an abandoned or re-opened propose leaves
     # NO orphan/duplicate ticket on the map (was: a ticket committed per propose call).
     logger.info("start_plan: mode=%s pid=%s tid=%s title=%r", _mode(), pid, tid, title)
 
-    graph.invoke(
-        {
-            "project_id": pid,
-            "ticket_id": tid,
-            "repo_dir": _repo_dir(db, pid),
-            # use the goal text as the objective when the project has no Objective yet, so
-            # the planner + step prompts still receive the project goal (not an empty "").
-            "objective": obj.label if obj else title,
-            "ticket_title": title,
-            # re-planning an existing ticket seeds the proposal from its current steps so
-            # the plan is revised, not silently replaced with a generic 3-step template.
-            "existing_steps": _existing_steps(db, pid, tid),
-            "steps": [],
-            "current": 0,
-            "decisions": [],
-        },
-        cfg,
-    )
-    return _payload(tid, graph.get_state(cfg))
+    with _GRAPH_LOCK:
+        graph.invoke(
+            {
+                "project_id": pid,
+                "ticket_id": tid,
+                "repo_dir": _repo_dir(db, pid),
+                # use the goal text as the objective when the project has no Objective yet,
+                # so the planner + step prompts still receive the goal (not an empty "").
+                "objective": obj.label if obj else title,
+                "ticket_title": title,
+                # re-planning an existing ticket seeds the proposal from its current steps so
+                # the plan is revised, not silently replaced with a generic 3-step template.
+                "existing_steps": _existing_steps(db, pid, tid),
+                "steps": [],
+                "current": 0,
+                "decisions": [],
+            },
+            cfg,
+        )
+        snap = graph.get_state(cfg)
+    # Proposal ready — it now awaits the user's approval, not the PLAN agent. Clear the
+    # "planning" spinner (set above, visible while the slow real-mode propose blocked) so an
+    # abandoned/closed plan modal doesn't leave a perpetual spinner on the ticket.
+    _set_activity(db, pid, tid, None)
+    return _payload(tid, snap)
 
 
 @router.post("/tickets/{tid}/plan/approve", response_model=LifecycleStateOut)
@@ -285,20 +377,30 @@ def approve_plan(pid: str, tid: str, body: PlanApproveIn, db: Session = Depends(
     logger.info("approve_plan: pid=%s tid=%s steps=%d", pid, tid, len(body.steps or []))
     graph = _build(db, pid, tid, title=body.title)
     cfg = _cfg(tid)
-    snap = graph.get_state(cfg)
+    with _GRAPH_LOCK:
+        snap = graph.get_state(cfg)
     awaiting = _awaiting(snap)
     if not (awaiting and awaiting.get("type") == "plan_approval"):
         raise HTTPException(409, "no plan awaiting approval; call /plan first")
     # The goal/title was supplied at propose time and lives in the checkpoint; use it (over
     # the usually-absent approve-body title) so the ticket/Objective get the real goal label.
     title = body.title or (snap.values or {}).get("ticket_title")
-    if title != body.title:
-        graph = _build(db, pid, tid, title=title)  # rebuild so on_steps_approved uses it
-    resume = {"approve": True}
+    resume: dict = {"approve": True}
     if body.steps is not None:
         resume["steps"] = [s.model_dump() for s in body.steps]
-    graph.invoke(Command(resume=resume), cfg)
-    return _payload(tid, graph.get_state(cfg))
+
+    # Execution (step 1 onward) is the slow part. Run it in the background so the request
+    # returns at once; the board fills in + step status advances via getGraph polling
+    # (data.activity). Sync path (ASV3_ASYNC_EXEC=0 / tests) keeps the original behavior.
+    if _async_enabled():
+        _invoke_async(pid, tid, title, resume)
+        return _payload(tid, snap)  # pre-execution snapshot; steps appear via polling
+    if title != body.title:
+        graph = _build(db, pid, tid, title=title)  # rebuild so on_steps_approved uses it
+    with _GRAPH_LOCK:
+        graph.invoke(Command(resume=resume), cfg)
+        snap = graph.get_state(cfg)
+    return _payload(tid, snap)
 
 
 def _ticket_done_if_all_steps_done(db: Session, pid: str, tid: str) -> None:
@@ -327,8 +429,33 @@ def _review_db_direct(db: Session, pid: str, tid: str, sid: str, action: ReviewA
             ticket.status = "awaiting_review"
         # leave the step awaiting_review so the human can later mark it done (approve)
     # changes: no executor to re-run here; the step stays awaiting_review (no-op, no error)
+    if action.kind == "approve" and ticket is not None and ticket.status == "done":
+        _set_activity(db, pid, tid, "done", "완료")
     db.commit()
     if action.kind == "approve" and _all_tickets_done(db, pid):
+        promote_project(db, pid, MEMORY)
+
+
+def _finalize_review(db: Session, pid: str, tid: str, sid: str, action: ReviewActionIn, snap) -> None:
+    """Post-invoke DB updates for a live-interrupt review (shared by the sync path and the
+    async worker, so both end in the same state)."""
+    node = db.get(Node, sid)
+    ticket = db.get(Node, tid)
+    if action.kind == "approve":
+        if node is not None:
+            node.status = "done"
+        if not snap.next and ticket is not None:
+            ticket.status = "done"
+            _set_activity(db, pid, tid, "done", "완료")
+    elif action.kind == "takeover":
+        if ticket is not None:
+            ticket.status = "awaiting_review"
+        # leave the step awaiting_review so a later approve (DB-direct, graph ended) completes it
+    # changes: on_step_committed already reset the step to awaiting_review during the re-run
+    db.commit()
+    # project complete (this approve finished its last ticket) -> distill Decisions into
+    # the personal ~/llm_wiki + index them for cross-project recall.
+    if action.kind == "approve" and not snap.next and _all_tickets_done(db, pid):
         promote_project(db, pid, MEMORY)
 
 
@@ -338,7 +465,8 @@ def review_step(pid: str, sid: str, action: ReviewActionIn, db: Session = Depend
     tid = _ticket_of_step(db, pid, sid)
     graph = _build(db, pid, tid)
     cfg = _cfg(tid)
-    snap = graph.get_state(cfg)
+    with _GRAPH_LOCK:
+        snap = graph.get_state(cfg)
     awaiting = _awaiting(snap)
     if not (awaiting and awaiting.get("type") == "review"):
         # No live interrupt: a seeded step, or a step whose graph already ended (takeover).
@@ -350,38 +478,47 @@ def review_step(pid: str, sid: str, action: ReviewActionIn, db: Session = Depend
         }:
             raise HTTPException(409, "no step awaiting review")
         _review_db_direct(db, pid, tid, sid, action)
-        return _payload(tid, graph.get_state(cfg))
+        return _payload(tid, snap)
 
-    graph.invoke(Command(resume={"kind": action.kind, "comment": action.comment}), cfg)
-    snap = graph.get_state(cfg)
+    vals = snap.values or {}
+    steps = vals.get("steps", [])
+    cur = vals.get("current", 0) or 0
+    resume = {"kind": action.kind, "comment": action.comment}
+    # approve of a non-last step re-enters execute_step (slow); changes always re-runs the
+    # current step (slow). takeover and last-step approve are quick (no execution).
+    will_execute = action.kind == "changes" or (action.kind == "approve" and cur + 1 < len(steps))
 
-    node = db.get(Node, sid)
-    ticket = db.get(Node, tid)
-    if action.kind == "approve":
-        if node is not None:
-            node.status = "done"
-        if not snap.next and ticket is not None:
-            ticket.status = "done"
-    elif action.kind == "takeover":
-        if ticket is not None:
-            ticket.status = "awaiting_review"
-        # leave the step awaiting_review so a later approve (now via the DB-direct path,
-        # since the graph has ended) can complete it — no dead end after takeover.
-    # changes: the step re-executes, on_step_committed resets it to awaiting_review
-    db.commit()
+    if _async_enabled() and will_execute:
+        node = db.get(Node, sid)
+        if action.kind == "approve":
+            if node is not None:
+                node.status = "done"  # reviewed step done now — don't wait for the next run
+            _set_activity(db, pid, tid, "executing", f"step {cur + 2}/{len(steps)}")
+        else:  # changes -> the same step re-runs
+            if node is not None:
+                node.status = "executing"
+            _set_activity(db, pid, tid, "executing", f"step {cur + 1}/{len(steps)}")
+        db.commit()
+        _invoke_async(
+            pid, tid, None, resume,
+            after=lambda db2, snap2: _finalize_review(db2, pid, tid, sid, action, snap2),
+        )
+        return _payload(tid, snap)
 
-    # project complete (this approve finished its last ticket) -> distill its Decisions
-    # into the personal ~/llm_wiki + index them for cross-project recall.
-    if action.kind == "approve" and not snap.next and _all_tickets_done(db, pid):
-        promote_project(db, pid, MEMORY)
-
+    # Sync path: takeover, last-step approve, or async disabled (tests).
+    with _GRAPH_LOCK:
+        graph.invoke(Command(resume=resume), cfg)
+        snap = graph.get_state(cfg)
+    _finalize_review(db, pid, tid, sid, action, snap)
     return _payload(tid, snap)
 
 
 @router.get("/tickets/{tid}/state", response_model=LifecycleStateOut)
 def ticket_state(pid: str, tid: str, db: Session = Depends(get_session)):
     graph = _build(db, pid, tid)
-    return _payload(tid, graph.get_state(_cfg(tid)))
+    with _GRAPH_LOCK:
+        snap = graph.get_state(_cfg(tid))
+    return _payload(tid, snap)
 
 
 @router.get("/info", response_model=ProjectInfoOut)

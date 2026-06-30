@@ -1,6 +1,14 @@
 import { useStore } from '../../store/useStore';
-import { neighbors, ticketDisplayStatus, type GraphNode, type ProjectGraph, type Status } from '../../domain/graph';
+import {
+  neighbors,
+  nodeActivity,
+  ticketDisplayStatus,
+  type GraphNode,
+  type ProjectGraph,
+  type Status,
+} from '../../domain/graph';
 import { CheckIcon, ChevronRightIcon, ArrowRightIcon } from '../icons';
+import { ActivityBadge } from '../ActivityBadge';
 import './TicketBoard.css';
 
 const STATUS_LABEL: Record<Status, string> = {
@@ -113,6 +121,7 @@ export function TicketBoard() {
           <span className="dot" />
           {STATUS_LABEL[display]}
         </span>
+        <ActivityBadge activity={nodeActivity(ticket)} />
         <span className="board__progress">
           <span className="board__bar">
             <span className="board__bar-fill" style={{ width: `${pct}%` }} />

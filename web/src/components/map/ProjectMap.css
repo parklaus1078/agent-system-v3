@@ -87,6 +87,11 @@
   justify-content: space-between;
   margin-bottom: 7px;
 }
+.rf-ticket__status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 .rf-ticket__label {
   font-size: 14px;
   font-weight: 600;

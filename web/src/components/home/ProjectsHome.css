@@ -221,3 +221,7 @@
 }
 .home__repo .btn--sm { padding: 4px 10px; height: auto; font-size: 12px; }
 .home__repo .btn--sm:disabled { opacity: 0.5; }
+
+/* multi-project list */
+.home__projects { display: flex; flex-direction: column; gap: 10px; }
+.home__empty { color: var(--ink-2, #8a93a3); font-size: 13px; padding: 8px 2px; }

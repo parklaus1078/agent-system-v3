@@ -1,13 +1,35 @@
 import type { ProjectGraph, GraphNode } from '../../domain/graph';
 import { neighbors } from '../../domain/graph';
 import type { ApiClient } from '../ApiClient';
-import type { StepDetail, ReviewAction, PlanProposal, ProjectInfo } from '../dto';
+import type {
+  StepDetail,
+  ReviewAction,
+  PlanProposal,
+  ProjectInfo,
+  ProjectSummary,
+  ProjectProposal,
+  ProjectCreated,
+} from '../dto';
 import { makeFixture } from './fixtures';
+
+function slugify(text: string): string {
+  return (
+    text
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 40)
+      .replace(/^-+|-+$/g, '') || 'project'
+  );
+}
 
 export class MockApiClient implements ApiClient {
   private graph: ProjectGraph = makeFixture();
   private subs = new Set<() => void>();
   private repoOverride: string | null = null; // null -> workspace default
+  // Projects created via approveProject — surfaced in listProjects so the landing list
+  // updates (the mock keeps a single fixture graph, so their maps show the fixture).
+  private extraProjects: ProjectSummary[] = [];
 
   private notify() {
     this.subs.forEach((cb) => cb());
@@ -154,6 +176,58 @@ export class MockApiClient implements ApiClient {
     }, 900);
   }
 
+  setPid(_pid: string): void {
+    /* single in-memory fixture (project p1); nothing to switch */
+  }
+
+  async listProjects(): Promise<ProjectSummary[]> {
+    const obj = this.graph.nodes.find((n) => n.kind === 'objective');
+    const tickets = this.graph.nodes.filter((n) => n.kind === 'ticket');
+    const steps = this.graph.nodes.filter((n) => n.kind === 'step');
+    const base: ProjectSummary[] = obj
+      ? [
+          {
+            projectId: 'p1',
+            title: obj.label,
+            description: (obj.data?.description as string) ?? null,
+            tickets: tickets.length,
+            steps: steps.length,
+            awaiting: steps.filter((s) => s.status === 'awaiting_review').length,
+          },
+        ]
+      : [];
+    return [...base, ...this.extraProjects];
+  }
+
+  async proposeProject(goal: string): Promise<ProjectProposal> {
+    const title = goal.trim().split('\n')[0].slice(0, 60) || '새 프로젝트';
+    return {
+      slug: slugify(title),
+      title,
+      tickets: [
+        { title: '핵심 기능 구현', intent: `${title} 핵심 동작` },
+        { title: '데이터·저장', intent: '영속/스토리지 계층' },
+        { title: '테스트·검증', intent: '테스트 추가 및 수용 기준 확인' },
+      ],
+    };
+  }
+
+  async approveProject(p: ProjectProposal): Promise<ProjectCreated> {
+    const slug = slugify(p.slug || p.title);
+    const existing = this.extraProjects.find((x) => x.projectId === slug);
+    if (existing) return { projectId: slug, title: existing.title, tickets: existing.tickets, created: false };
+    this.extraProjects.push({
+      projectId: slug,
+      title: p.title || slug,
+      description: p.description ?? null,
+      tickets: p.tickets.length,
+      steps: 0,
+      awaiting: 0,
+    });
+    this.notify();
+    return { projectId: slug, title: p.title || slug, tickets: p.tickets.length, created: true };
+  }
+
   async getProjectInfo(): Promise<ProjectInfo> {
     return this.repoOverride
       ? { projectId: 'p1', repoDir: this.repoOverride, repoSource: 'override' }
@@ -164,6 +238,14 @@ export class MockApiClient implements ApiClient {
     this.repoOverride = repoDir && repoDir.trim() ? repoDir.trim() : null;
     this.notify();
     return this.getProjectInfo();
+  }
+
+  async saveLayout(positions: Record<string, { x: number; y: number }>): Promise<void> {
+    for (const [id, p] of Object.entries(positions)) {
+      const n = this.graph.nodes.find((node) => node.id === id);
+      if (n) n.data = { ...(n.data || {}), pos: { x: p.x, y: p.y } };
+    }
+    this.notify();
   }
 
   async owningPath(nodeId: string): Promise<string[]> {

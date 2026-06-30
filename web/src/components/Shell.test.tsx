@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { Shell } from './Shell';
 import { useStore } from '../store/useStore';
 
@@ -8,8 +9,19 @@ beforeEach(() => {
   useStore.setState({ mode: 'navigator', selectedTicketId: null, selectedStepId: null });
 });
 
+// Shell reads :pid from the route; render it under /project/p1.
+const renderShell = () =>
+  render(
+    <MemoryRouter initialEntries={['/project/p1']}>
+      <Routes>
+        <Route path="/project/:pid" element={<Shell />} />
+        <Route path="/" element={<div>HOME</div>} />
+      </Routes>
+    </MemoryRouter>,
+  );
+
 test('shows objective and opens the ticket board when a ticket is clicked', async () => {
-  render(<Shell />);
+  renderShell();
   await waitFor(() => expect(screen.getByText('구독 티어 할일앱')).toBeInTheDocument());
   // map shows tickets; clicking one drills into its kanban board (Navigator zoom-in)
   await userEvent.click(await screen.findByText('구독 티어 + 기능 게이팅'));
@@ -18,7 +30,7 @@ test('shows objective and opens the ticket board when a ticket is clicked', asyn
 });
 
 test('segmented toggle tracks the rendered view; the project name returns to the map as Navigator', async () => {
-  render(<Shell />);
+  renderShell();
   await waitFor(() => expect(screen.getByText('구독 티어 할일앱')).toBeInTheDocument());
   const nav = () => screen.getByRole('button', { name: 'Navigator' });
   const cock = () => screen.getByRole('button', { name: 'Cockpit' });
@@ -39,7 +51,7 @@ test('segmented toggle tracks the rendered view; the project name returns to the
 });
 
 test('Legend button toggles the legend panel', async () => {
-  render(<Shell />);
+  renderShell();
   await waitFor(() => expect(screen.getByText('구독 티어 할일앱')).toBeInTheDocument());
   expect(screen.queryByText('NODE KIND — shape')).toBeNull();
   await userEvent.click(screen.getByRole('button', { name: /Legend/ }));
@@ -48,7 +60,7 @@ test('Legend button toggles the legend panel', async () => {
 });
 
 test('does NOT render internal plumbing controls', async () => {
-  render(<Shell />);
+  renderShell();
   await waitFor(() => expect(screen.getByText('구독 티어 할일앱')).toBeInTheDocument());
   expect(screen.queryByText(/worker tick/i)).toBeNull();
   expect(screen.queryByText(/watcher tick/i)).toBeNull();

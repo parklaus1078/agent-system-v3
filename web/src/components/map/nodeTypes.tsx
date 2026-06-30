@@ -1,6 +1,7 @@
 import { Handle, Position, type NodeProps } from '@xyflow/react';
-import type { Status } from '../../domain/graph';
+import type { NodeActivity, Status } from '../../domain/graph';
 import { TargetIcon, DiamondIcon, CodeIcon, FlaskIcon, ChevronRightIcon } from '../icons';
+import { ActivityBadge } from '../ActivityBadge';
 
 // status -> short pill label (matches the wireframe's English status words)
 const STATUS_LABEL: Record<Status, string> = {
@@ -64,6 +65,7 @@ export interface TicketData {
   done: number;
   total: number;
   hint?: { text: string; tone: Status } | null;
+  activity?: NodeActivity;
   dimmed?: boolean;
   [k: string]: unknown;
 }
@@ -77,7 +79,10 @@ export function TicketNode({ data }: NodeProps) {
       <Handles />
       <div className="rf-ticket__head">
         <span className="kindtag">{d.tag}</span>
-        <StatusPill status={d.status} />
+        <span className="rf-ticket__status">
+          <ActivityBadge activity={d.activity} compact />
+          <StatusPill status={d.status} />
+        </span>
       </div>
       <div className="rf-ticket__label">{d.label}</div>
       <div className="rf-ticket__bar" aria-hidden="true">

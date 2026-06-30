@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { ProjectMap } from './map/ProjectMap';
 import { TicketBoard } from './board/TicketBoard';
@@ -25,8 +26,10 @@ function useElapsedClock(): string {
   return `${hh}:${mm}:${ss}`;
 }
 
-export function Shell({ onHome }: { onHome?: () => void }) {
-  const load = useStore((s) => s.load);
+export function Shell() {
+  const { pid } = useParams();
+  const navigate = useNavigate();
+  const setPid = useStore((s) => s.setPid);
   const graph = useStore((s) => s.graph);
   const selectedTicketId = useStore((s) => s.selectedTicketId);
   const selectedStepId = useStore((s) => s.selectedStepId);
@@ -40,7 +43,6 @@ export function Shell({ onHome }: { onHome?: () => void }) {
   const error = useStore((s) => s.error);
   const setError = useStore((s) => s.setError);
   const clock = useElapsedClock();
-  const loaded = useRef(false);
   const [highlightIds, setHighlightIds] = useState<string[] | null>(null);
   const [goalFlow, setGoalFlow] = useState<'none' | 'goal' | 'plan'>('none');
   const [pendingGoal, setPendingGoal] = useState('');
@@ -49,12 +51,11 @@ export function Shell({ onHome }: { onHome?: () => void }) {
   const [pendingTid, setPendingTid] = useState('');
   const [legendOpen, setLegendOpen] = useState(false);
 
+  // The route's :pid selects the project; setPid loads its graph (and is a no-op if
+  // already current).
   useEffect(() => {
-    if (!loaded.current) {
-      loaded.current = true;
-      void load();
-    }
-  }, [load]);
+    if (pid) setPid(pid);
+  }, [pid, setPid]);
 
   // Opening a ticket (cockpit) clears any trace highlight on the map.
   useEffect(() => {
@@ -93,7 +94,7 @@ export function Shell({ onHome }: { onHome?: () => void }) {
       <h1 className="sr-only">LLM Dev Control Tower</h1>
       <header className="topbar">
         <div className="topbar__brand">
-          <button className="topbar__home" onClick={onHome} aria-label="프로젝트 목록">
+          <button className="topbar__home" onClick={() => navigate('/')} aria-label="프로젝트 목록">
             <span className="topbar__logo" aria-hidden="true">
               CT
             </span>

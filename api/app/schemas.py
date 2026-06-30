@@ -80,6 +80,35 @@ class PlanApproveIn(BaseModel):
     title: str | None = None  # optional edited ticket title (persisted if the ticket is new)
 
 
+class ProjectPlanIn(BaseModel):
+    goal: str
+
+
+class TicketProposal(BaseModel):
+    title: str
+    intent: str = ""
+
+
+class ProjectProposalOut(BaseModel):
+    slug: str
+    title: str
+    tickets: list[TicketProposal] = []
+
+
+class ProjectApproveIn(BaseModel):
+    slug: str
+    title: str
+    tickets: list[TicketProposal] = []
+    description: str | None = None
+
+
+class ProjectCreatedOut(BaseModel):
+    projectId: str
+    title: str
+    tickets: int  # number of tickets created
+    created: bool  # False if the slug already existed (idempotent no-op)
+
+
 class ProjectInfoOut(BaseModel):
     projectId: str
     repoDir: str
@@ -88,6 +117,20 @@ class ProjectInfoOut(BaseModel):
 
 class ProjectRepoIn(BaseModel):
     repoDir: str | None = None  # set the project's target repo; null/empty -> revert to default
+
+
+class Pos(BaseModel):
+    x: float
+    y: float
+
+
+class LayoutIn(BaseModel):
+    # node id -> position; drag&drop persistence (Phase 4)
+    positions: dict[str, Pos]
+
+
+class LayoutOut(BaseModel):
+    updated: int
 
 
 class LifecycleStateOut(BaseModel):

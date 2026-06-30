@@ -98,3 +98,15 @@ test('reviewStep approve on the ticket’s last step completes the ticket', asyn
     vi.useRealTimers();
   }
 });
+
+test('saveLayout persists node positions onto data.pos and notifies', async () => {
+  const api = new MockApiClient();
+  let pinged = 0;
+  api.subscribe(() => {
+    pinged++;
+  });
+  await api.saveLayout({ obj: { x: 12, y: 34 } });
+  const g = await api.getGraph();
+  expect(g.nodes.find((n) => n.id === 'obj')?.data?.pos).toEqual({ x: 12, y: 34 });
+  expect(pinged).toBeGreaterThan(0);
+});

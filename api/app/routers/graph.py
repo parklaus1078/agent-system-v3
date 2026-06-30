@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from ..db import get_session
 from ..graph import store
-from ..schemas import GraphOut, StepDetailOut
+from ..schemas import GraphOut, LayoutIn, LayoutOut, StepDetailOut
 
 router = APIRouter(prefix="/projects/{pid}", tags=["graph"])
 
@@ -33,3 +33,11 @@ def step_detail(pid: str, sid: str, db: Session = Depends(get_session)):
 @router.get("/owning-path/{nid:path}")
 def owning_path(pid: str, nid: str, db: Session = Depends(get_session)):
     return {"path": store.owning_path(db, pid, nid)}
+
+
+@router.post("/layout", response_model=LayoutOut)
+def save_layout(pid: str, body: LayoutIn, db: Session = Depends(get_session)):
+    """Persist dragged node positions for this project (node.data.pos); echoed back by
+    /graph so the map restores them on reload / another machine."""
+    positions = {nid: {"x": p.x, "y": p.y} for nid, p in body.positions.items()}
+    return {"updated": store.save_layout(db, pid, positions)}
