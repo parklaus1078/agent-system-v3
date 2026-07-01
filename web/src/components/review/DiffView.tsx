@@ -12,13 +12,24 @@ interface Row {
   cls: 'add' | 'del' | 'ctx';
 }
 
+// git/unidiff file headers that aren't +/-/@@ — drop them so they don't render as context
+const GIT_HEADER =
+  /^(diff --git |index |new file mode |deleted file mode |old mode |new mode |similarity index |dissimilarity index |rename (from|to) |copy (from|to) |Binary files )/;
+
 function toRows(patch: string): Row[] {
   return patch
     .replace(/\n$/, '')
     .split('\n')
-    .filter((l) => !l.startsWith('+++') && !l.startsWith('---') && !l.startsWith('@@'))
+    .filter(
+      (l) =>
+        !l.startsWith('+++') && !l.startsWith('---') && !l.startsWith('@@') && !GIT_HEADER.test(l),
+    )
     .map((line, i) => ({
-      line,
+      // Drop the leading unified-diff marker (+/-/space) from the displayed text — the row
+      // color already encodes add/remove, so the sign is redundant. `cls` is still derived
+      // from the ORIGINAL prefixed line, so colors are unchanged; slicing every body line
+      // (incl. context's leading space) keeps columns aligned.
+      line: line.slice(1),
       num: i + 1,
       cls: line.startsWith('+') ? 'add' : line.startsWith('-') ? 'del' : 'ctx',
     }));

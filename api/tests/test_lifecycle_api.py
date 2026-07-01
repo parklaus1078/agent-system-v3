@@ -51,14 +51,15 @@ def test_full_lifecycle_persists_to_db_and_repo(repo):
     c = _client()
     tid = f"{PID}-t1"
 
-    # 1) start plan -> graph interrupts at plan_approval, ticket created in DB
+    # 1) start plan -> graph interrupts at plan_approval. The ticket is NOT persisted yet
+    #    (only on approve) so an abandoned/duplicated propose leaves no orphan ticket.
     r = c.post(f"/projects/{PID}/tickets/{tid}/plan", json={"title": "구독 결제 게이팅"})
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["awaiting"]["type"] == "plan_approval"
     assert len(body["awaiting"]["steps"]) == 3
     db = SessionLocal()
-    assert db.get(Node, tid) is not None
+    assert db.get(Node, tid) is None  # not created at propose time (was: created eagerly)
     db.close()
 
     # 2) approve plan -> 3 step nodes, first step executed/committed/ingested
@@ -72,8 +73,9 @@ def test_full_lifecycle_persists_to_db_and_repo(repo):
     crs = db.query(Node).filter(Node.project_id == PID, Node.kind == "code_region").all()
     assert len(crs) >= 1  # diff ingested into the graph
     db.close()
+    # ASV3_TARGET_REPO_DIR is a per-project root, so the commit lands in {repo}/{PID}
     log = subprocess.run(
-        ["git", "log", "--oneline"], cwd=repo, capture_output=True, text=True
+        ["git", "log", "--oneline"], cwd=os.path.join(repo, PID), capture_output=True, text=True
     ).stdout
     assert "step 1" in log  # a real commit landed in the target repo
 

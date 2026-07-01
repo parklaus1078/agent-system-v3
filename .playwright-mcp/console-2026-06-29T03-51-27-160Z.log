@@ -1,5 +1,0 @@
-[     154ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://127.0.0.1:5179/node_modules/.vite/deps/chunk-XPR23Y44.js?v=f957d4dc:21548
-[   74292ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:5179/src/components/plan/PlanApproval.tsx?t=1782705161426:0
-[   74293ms] [ERROR] [hmr] Failed to reload /src/components/plan/PlanApproval.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above) @ http://127.0.0.1:5179/@vite/client:175
-[   80635ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:5179/src/components/plan/PlanApproval.tsx?t=1782705167782:0
-[   80636ms] [ERROR] [hmr] Failed to reload /src/components/plan/PlanApproval.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above) @ http://127.0.0.1:5179/@vite/client:175

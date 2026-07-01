@@ -7,12 +7,53 @@ export type NodeKind = 'objective' | 'ticket' | 'step' | 'code_region' | 'test' 
 export type EdgeKind = 'has' | 'subdivides' | 'touches' | 'tested_by' | 'decided' | 'produced';
 export type Status = 'planning' | 'executing' | 'awaiting_review' | 'done' | 'blocked';
 
+/** Coarse "what the backend is doing now", written by the lifecycle at each transition
+ *  and read live via getGraph polling (see Phase 3). Lives on the ticket node's data. */
+export interface NodeActivity {
+  state: 'planning' | 'executing' | 'awaiting_review' | 'blocked' | 'done';
+  detail?: string; // e.g. "step 2/5"
+  since?: string; // ISO timestamp the state was entered (for an elapsed counter)
+}
+
 export interface GraphNode {
   id: string;
   kind: NodeKind;
   label: string;
   status?: Status;
   data?: Record<string, unknown>;
+}
+
+/** The node's live activity, if any (typed read of `data.activity`). */
+export function nodeActivity(n: GraphNode | undefined): NodeActivity | undefined {
+  const a = n?.data?.activity as NodeActivity | undefined;
+  return a && a.state ? a : undefined;
+}
+
+/** A ticket's backlog position (smaller = earlier) — mirrors backend store.ticket_order so the
+ *  map/rail agree with a `reprioritize` steer: an explicit `data.order` wins, else the number in
+ *  its `{slug}-{n}` id suffix (the `t?` also reads the legacy `-t{n}` format). */
+export function ticketOrder(n: GraphNode): number {
+  const o = n.data?.order;
+  if (typeof o === 'number' && Number.isFinite(o)) return o;
+  const m = /-t?(\d+)$/.exec(n.id);
+  return m ? Number(m[1]) : 0;
+}
+
+/** The next ticket id for a project: `{pid}-{n}`, n = highest existing ticket number + 1
+ *  (auto-increment) — mirrors backend store.next_ticket_id so a UI-created ticket gets the same
+ *  `{slug}-{number}` shape as backend-created ones (not an opaque `t-{timestamp}`). */
+export function nextTicketId(g: ProjectGraph, pid: string): string {
+  const nums = g.nodes
+    .filter((n) => n.kind === 'ticket')
+    .map((n) => /-t?(\d+)$/.exec(n.id))
+    .filter((m): m is RegExpExecArray => m !== null)
+    .map((m) => Number(m[1]));
+  return `${pid}-${nums.length ? Math.max(...nums) + 1 : 1}`;
+}
+
+/** Tickets in backlog order (reprioritize-aware). Used by every ticket-listing surface. */
+export function orderedTickets(g: ProjectGraph): GraphNode[] {
+  return g.nodes.filter((n) => n.kind === 'ticket').sort((a, b) => ticketOrder(a) - ticketOrder(b));
 }
 export interface GraphEdge {
   id: string;

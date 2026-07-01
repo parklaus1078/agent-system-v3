@@ -7,11 +7,13 @@ Requires-Dist: uvicorn[standard]>=0.30
 Requires-Dist: sqlalchemy>=2.0.30
 Requires-Dist: pydantic>=2.8
 Requires-Dist: unidiff>=0.7.5
+Requires-Dist: python-dotenv>=1.0
 Requires-Dist: langgraph>=0.2
 Requires-Dist: langgraph-checkpoint-postgres>=2.0
 Requires-Dist: langchain-anthropic>=0.2
 Requires-Dist: langchain-core>=0.3
 Requires-Dist: langchain-text-splitters>=0.3
+Requires-Dist: langchain-openai>=0.2
 Requires-Dist: numpy>=1.26
 Provides-Extra: dev
 Requires-Dist: pytest>=8.3; extra == "dev"

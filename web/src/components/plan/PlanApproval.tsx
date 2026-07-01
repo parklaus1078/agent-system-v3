@@ -13,11 +13,13 @@ type Step = PlanProposal['steps'][number];
 export function PlanApproval({
   goal,
   ticketId,
+  newTicketId,
   onApproved,
   onCancel,
 }: {
   goal?: string;
   ticketId?: string;
+  newTicketId?: string; // stable id minted once for a new-goal flow (prevents duplicate tickets)
   onApproved: () => void;
   onCancel?: () => void;
 }) {
@@ -29,6 +31,7 @@ export function PlanApproval({
   const [tag, setTag] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [elapsed, setElapsed] = useState(0); // seconds spent generating the plan (liveness)
   // The ticket id the planner resolved to (a new goal mints one) — passed to approve.
   const [planTid, setPlanTid] = useState<string | null>(null);
   // Initialize the editable steps ONCE — not on every live graph reload, which
@@ -50,9 +53,19 @@ export function PlanApproval({
     const ticket = ticketId ? graph?.nodes.find((n) => n.id === ticketId) : undefined;
     setTitle(ticket?.label ?? goal ?? '');
     setTag((ticket?.data?.tag as string) ?? null);
-    const target = ticketId ? { ticketId } : { goal: goal! };
+    const target = ticketId ? { ticketId } : { goal: goal!, ticketId: newTicketId };
+    // Client-side timeout so a stalled backend can't leave the modal spinning forever.
+    let settled = false;
+    const timeout = setTimeout(() => {
+      if (settled || !mounted.current) return;
+      settled = true;
+      setError('플랜 생성이 지연되고 있습니다. 서버/Claude CLI 상태를 확인해 주세요.');
+      setReady(true);
+    }, 90_000);
     api.proposePlan(target).then(
       (p) => {
+        settled = true;
+        clearTimeout(timeout);
         if (!mounted.current) return;
         setPlanTid(p.ticketId);
         if (p.title) setTitle(p.title);
@@ -60,13 +73,22 @@ export function PlanApproval({
         setReady(true);
       },
       () => {
+        settled = true;
+        clearTimeout(timeout);
         if (!mounted.current) return;
         // Don't hang on the loading state forever (e.g. backend unreachable).
         setError('플랜을 불러오지 못했습니다. 서버 연결을 확인해 주세요.');
         setReady(true);
       },
     );
-  }, [api, graph, goal, ticketId]);
+  }, [api, graph, goal, ticketId, newTicketId]);
+
+  // While generating, tick an elapsed-seconds counter so the user sees it's live, not hung.
+  useEffect(() => {
+    if (ready) return;
+    const id = setInterval(() => setElapsed((s) => s + 1), 1000);
+    return () => clearInterval(id);
+  }, [ready]);
 
   const setLabel = (i: number, label: string) =>
     setSteps((s) => s.map((st, j) => (j === i ? { ...st, label } : st)));
@@ -85,7 +107,7 @@ export function PlanApproval({
     setBusy(true);
     setError(null);
     try {
-      await api.approvePlan({ ticketId: planTid ?? ticketId ?? 't-new', steps, title });
+      await api.approvePlan({ ticketId: planTid ?? ticketId ?? newTicketId ?? 't-new', steps, title });
       onApproved();
     } catch {
       setError('승인에 실패했습니다. 다시 시도해 주세요.');
@@ -94,7 +116,13 @@ export function PlanApproval({
   };
 
   if (!ready) {
-    return <div className="plan plan--loading">플랜을 생성하는 중…</div>;
+    return (
+      <div className="plan plan--loading">
+        <span className="plan__spinner" aria-hidden="true" />
+        <span>플랜을 생성하는 중… <span className="mono">{elapsed}s</span></span>
+        <span className="plan__loadhint">PLAN 에이전트가 목표를 step으로 분해하고 있습니다.</span>
+      </div>
+    );
   }
 
   return (
@@ -105,7 +133,7 @@ export function PlanApproval({
           <span className="plan__goal">{title}</span>
         </div>
         {onCancel && (
-          <button className="plan__close" aria-label="닫기" onClick={onCancel}>
+          <button className="plan__close" aria-label="닫기" onClick={onCancel} disabled={busy}>
             <XIcon size={16} />
           </button>
         )}
@@ -156,13 +184,26 @@ export function PlanApproval({
         </span>
         <div className="plan__actions">
           {onCancel && (
-            <button className="btn btn--ghost" onClick={onCancel}>
+            <button className="btn btn--ghost" onClick={onCancel} disabled={busy}>
               취소
             </button>
           )}
-          <button className="btn btn--primary" disabled={busy} onClick={approve}>
-            <CheckIcon size={15} />
-            승인하고 실행 시작
+          <button
+            className="btn btn--primary"
+            disabled={busy || error !== null || steps.length === 0}
+            onClick={approve}
+          >
+            {busy ? (
+              <>
+                <span className="plan__spinner plan__spinner--on-dark" aria-hidden="true" />
+                실행을 시작하는 중…
+              </>
+            ) : (
+              <>
+                <CheckIcon size={15} />
+                승인하고 실행 시작
+              </>
+            )}
           </button>
         </div>
       </footer>

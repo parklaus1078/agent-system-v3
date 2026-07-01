@@ -5,10 +5,33 @@
 }
 .plan--loading {
   padding: 44px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
   text-align: center;
   color: var(--muted);
   font-size: 13px;
 }
+.plan__loadhint { font-size: 11px; color: var(--ink-2, #888); }
+.plan__spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--border, #ccd3dd);
+  border-top-color: var(--accent, #2f6fed);
+  animation: plan-spin 0.7s linear infinite;
+  display: inline-block;
+  vertical-align: -3px;
+}
+.plan__spinner--on-dark {
+  width: 13px;
+  height: 13px;
+  border-color: rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  margin-right: 6px;
+}
+@keyframes plan-spin { to { transform: rotate(360deg); } }
 .plan__head {
   display: flex;
   align-items: center;
@@ -187,4 +210,40 @@
 .plan__actions {
   display: flex;
   gap: 10px;
+}
+/* Project-init slug editor (ProjectInit reuses this stylesheet). */
+.plan__sluglabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 20px 4px;
+}
+.plan__slugcap {
+  font-size: 12px;
+  color: var(--faint);
+}
+.plan__desclabel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0 20px 6px;
+}
+.plan__desccap {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--faint);
+}
+.plan__descinput {
+  width: 100%;
+  resize: vertical;
+  min-height: 56px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  background: var(--surface, #fff);
+  color: inherit;
+  box-sizing: border-box;
 }

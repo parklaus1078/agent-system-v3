@@ -1,0 +1,831 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Agent System v3 — 서비스 매뉴얼</title>
+<style>
+  :root{
+    --bg:#0f1216; --panel:#161b22; --panel2:#1c232d; --line:#2a333f;
+    --ink:#e6edf3; --ink-dim:#9aa7b4; --ink-faint:#6b7684;
+    --accent:#4c8dff; --accent2:#7c5cff;
+    --ok:#3fb950; --warn:#d29922; --danger:#f85149; --review:#e3b341;
+    --fe:#2ea043; --be:#4c8dff; --int:#a371f7;
+    --chip:#222b36; --chip-line:#33404e;
+    --radius:12px; --mono:"SFMono-Regular",ui-monospace,"JetBrains Mono",Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI","Noto Sans KR",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.6;font-size:15px}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  code{font-family:var(--mono);background:#0b0e12;border:1px solid var(--line);border-radius:5px;padding:.08em .38em;font-size:.85em;color:#c9d5e3}
+
+  /* layout */
+  .wrap{display:grid;grid-template-columns:280px 1fr;max-width:1400px;margin:0 auto;min-height:100vh}
+  nav.toc{position:sticky;top:0;align-self:start;height:100vh;overflow:auto;border-right:1px solid var(--line);padding:26px 20px;background:linear-gradient(180deg,#12161c,#0f1216)}
+  nav.toc h2{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin:22px 0 8px}
+  nav.toc h2:first-child{margin-top:0}
+  nav.toc a{display:block;color:var(--ink-dim);padding:4px 8px;border-radius:7px;font-size:13.5px}
+  nav.toc a:hover{background:var(--panel2);color:var(--ink);text-decoration:none}
+  main{padding:40px 48px 120px;min-width:0}
+
+  header.hero{border:1px solid var(--line);border-radius:var(--radius);padding:30px 32px;margin-bottom:34px;
+    background:radial-gradient(1200px 300px at 0% 0%,rgba(76,141,255,.14),transparent),var(--panel)}
+  header.hero .tag{display:inline-block;font-family:var(--mono);font-size:11.5px;color:var(--accent);border:1px solid var(--chip-line);border-radius:999px;padding:3px 10px;margin-bottom:14px}
+  header.hero h1{margin:0 0 8px;font-size:30px;letter-spacing:-.01em}
+  header.hero p{margin:0;color:var(--ink-dim);max-width:78ch}
+
+  section{margin:0 0 46px;scroll-margin-top:20px}
+  section > h2.sec{font-size:22px;margin:0 0 4px;padding-bottom:10px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+  section > .sec-note{color:var(--ink-dim);margin:10px 0 22px;}
+  h3.grp{font-size:16px;color:var(--ink);margin:26px 0 12px;letter-spacing:.01em}
+  h3.grp .k{font-family:var(--mono);font-size:12px;color:var(--ink-faint)}
+
+  /* domain pills on section headers */
+  .dom{font-family:var(--mono);font-size:11px;padding:2px 9px;border-radius:999px;border:1px solid transparent}
+  .dom.fe{color:#7ee787;background:rgba(46,160,67,.12);border-color:rgba(46,160,67,.35)}
+  .dom.be{color:#a5c8ff;background:rgba(76,141,255,.12);border-color:rgba(76,141,255,.35)}
+  .dom.int{color:#d2b8ff;background:rgba(163,113,247,.12);border-color:rgba(163,113,247,.35)}
+
+  /* feature cards */
+  .cards{display:grid;grid-template-columns:1fr;gap:14px}
+  .card{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);padding:18px 20px;transition:border-color .15s}
+  .card:hover{border-color:#3b4756}
+  .card .top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+  .card h4{margin:0;font-size:16px}
+  .card .path{font-family:var(--mono);font-size:12px;color:var(--ink-faint)}
+  .card .ep{font-family:var(--mono);font-size:12.5px;color:#c9d5e3;background:#0b0e12;border:1px solid var(--line);border-radius:6px;padding:2px 8px;display:inline-block;margin:8px 0}
+  .card .what{color:var(--ink-dim);margin:8px 0 12px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
+  .row .lbl{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);min-width:64px}
+  .chip{font-family:var(--mono);font-size:11.5px;padding:2.5px 9px;border-radius:999px;background:var(--chip);border:1px solid var(--chip-line);color:#cdd8e4}
+  .chip.tech{border-color:rgba(76,141,255,.4);color:#a5c8ff;background:rgba(76,141,255,.08)}
+  .chip.concept{border-color:rgba(163,113,247,.4);color:#d2b8ff;background:rgba(163,113,247,.08)}
+
+  /* stack table */
+  table.stack{width:100%;border-collapse:collapse;margin-top:8px}
+  table.stack th,table.stack td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  table.stack th{color:var(--ink-faint);font-size:12px;letter-spacing:.06em;text-transform:uppercase;font-weight:600}
+  table.stack td:first-child{font-family:var(--mono);font-size:13px;color:#a5c8ff;white-space:nowrap}
+  table.stack td .m{color:var(--ink-dim)}
+
+  .callout{border:1px solid var(--chip-line);border-left:3px solid var(--accent);border-radius:8px;background:var(--panel2);padding:14px 16px;margin:16px 0;color:var(--ink-dim)}
+  .callout b{color:var(--ink)}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin:14px 0 0;font-size:13px;color:var(--ink-dim)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+
+  footer{border-top:1px solid var(--line);color:var(--ink-faint);font-size:13px;padding:22px 0 0;margin-top:40px}
+  @media (max-width:960px){.wrap{grid-template-columns:1fr}nav.toc{display:none}main{padding:26px 18px 80px}}
+  @media print{nav.toc{display:none}.wrap{grid-template-columns:1fr}body{background:#fff;color:#111}.card,header.hero{break-inside:avoid}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="toc">
+    <h2>개요</h2>
+    <a href="#overview">1. 시스템 개요</a>
+    <a href="#architecture">2. 아키텍처 &amp; 데이터 흐름</a>
+    <a href="#stack">3. 기술 스택 총람</a>
+    <a href="#recent">4. 최근 추가 기능 ★</a>
+    <h2>프론트엔드 (UI)</h2>
+    <a href="#fe-map">인과 지도 · 조종석</a>
+    <a href="#fe-lifecycle">계획 · 리뷰 게이트</a>
+    <a href="#fe-channel">대화 채널 · Steer</a>
+    <a href="#fe-governance">거버넌스 · 자율도</a>
+    <a href="#fe-cross">공통(상태·시드·라우팅)</a>
+    <h2>백엔드 (Server)</h2>
+    <a href="#be-api">HTTP API 엔드포인트</a>
+    <a href="#be-lifecycle">라이프사이클 상태기계</a>
+    <a href="#be-services">서비스 계층</a>
+    <a href="#be-graph">그래프 저장소 · Diff</a>
+    <a href="#be-ai">AI 트랜스포트 · RAG</a>
+    <a href="#be-persist">영속성 · 공통</a>
+    <h2>부록</h2>
+    <a href="#concepts">프로그래밍 개념 색인</a>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="tag">SERVICE MANUAL · v1 (CP0–CP4)</span>
+      <h1>Agent System v3 — 살아있는 조종석(Living Cockpit)</h1>
+      <p>거친 목표를 <b>작고·보이고·리뷰 가능한 step</b>으로 분해해 실행하는 LLM 개발 관제탑. 인과 지도(causal map) 위에서
+      계획→실행→리뷰가 흐르고, 사람은 <b>자율도 다이얼</b>과 <b>대화 채널(steer)</b>로 개입한다. 이 문서는 UI/서버의 모든 기능을
+      영역별로 나열하고, 각 기능에 쓰인 핵심 기술 스택과 소프트웨어 개념을 정리한 서비스 매뉴얼이다.</p>
+      <div class="legend">
+        <span><i class="dot" style="background:var(--fe)"></i> 프론트엔드(UI)</span>
+        <span><i class="dot" style="background:var(--be)"></i> 백엔드 API</span>
+        <span><i class="dot" style="background:var(--int)"></i> 백엔드 내부</span>
+        <span><i class="dot" style="background:var(--accent)"></i> <span class="chip tech" style="padding:1px 8px">tech</span> 기술</span>
+        <span><span class="chip concept" style="padding:1px 8px">concept</span> 개념</span>
+      </div>
+    </header>
+
+    <!-- ============================ OVERVIEW ============================ -->
+    <section id="overview">
+      <h2 class="sec">1. 시스템 개요</h2>
+      <p class="sec-note">두 개의 직교 축이 UI 전체를 구동한다: <b>노드 종류(kind)</b> → 모양/아이콘, <b>상태(status)</b> → 색.
+      백엔드는 프로젝트별 인과 그래프(Node/Edge)를 저장하고, 티켓마다 LangGraph 상태기계로 계획→실행→리뷰를
+      HITL(Human-in-the-loop) 게이트와 함께 돌린다.</p>
+      <div class="cards">
+        <div class="card">
+          <div class="top"><h4>도메인 모델 — 인과 그래프</h4><span class="path">6종 노드 · 6종 엣지</span></div>
+          <p class="what"><b>노드</b>: objective(목표) · ticket(일감) · step(단위작업) · code_region(코드 영역) · test(테스트) · decision(결정/제약).
+          <b>엣지</b>: has · subdivides · touches · tested_by · decided · produced. 상태는 planning / executing / awaiting_review / done / blocked.</p>
+          <div class="row"><span class="lbl">concept</span>
+            <span class="chip concept">directed graph</span><span class="chip concept">domain modeling</span>
+            <span class="chip concept">two-axis visual encoding</span>
+          </div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>핵심 루프 — 계획 · 실행 · 리뷰</h4><span class="path">HITL lifecycle</span></div>
+          <p class="what">목표 입력 → 티켓/플랜 제안 → 사람이 승인 → step 단위 실행(코드 diff 생성) → 리뷰 게이트(승인/수정요청/인수).
+          자율도에 따라 게이트가 매 step / 실패·최종만 / 무정지로 조절된다.</p>
+          <div class="row"><span class="lbl">concept</span>
+            <span class="chip concept">state machine</span><span class="chip concept">human-in-the-loop</span>
+            <span class="chip concept">interrupt / resume</span><span class="chip concept">one step = one commit</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================ ARCHITECTURE ============================ -->
+    <section id="architecture">
+      <h2 class="sec">2. 아키텍처 &amp; 데이터 흐름</h2>
+      <p class="sec-note">3계층 + 어댑터 seam. 프론트는 <code>ApiClient</code> 인터페이스에만 의존하고, 실제 백엔드(<code>HttpApiClient</code>)와
+      브라우저 목업(<code>MockApiClient</code>)을 런타임에 교체한다. 모든 쓰기는 <code>subscribe → reload</code>로 라이브 반영된다.</p>
+      <div class="callout">
+        <b>steer 한 번의 흐름:</b> 채널 입력(자유 NL) → <code>POST /steer</code> → intent-router가 7개 고정 op 중 하나로 분류
+        (redirect·constrain·reprioritize·scope·answer·control·clarify) → 그래프/자율도/체크포인트에 결정적으로 반영 →
+        채널에 결과 메시지 + 지도 하이라이트. <b>사람의 말이 항상 되돌릴 수 있는 그래프 조작으로만 반영</b>된다.
+      </div>
+      <div class="callout" style="border-left-color:var(--int)">
+        <b>실행 모드 &amp; 결정성:</b> <code>ASV3_AGENT_MODE=simulated</code>에서 planner/executor/intent-router가 결정적으로 동작(테스트·데모).
+        <code>anthropic-api</code>/<code>claude-cli</code> 등으로 지점별 교체 가능. 비동기 워커는 <b>governance를 요청 스레드에서 해석 + 스폰 전 commit</b>으로
+        공유 연결 레이스를 회피한다.
+      </div>
+    </section>
+
+    <!-- ============================ STACK ============================ -->
+    <section id="stack">
+      <h2 class="sec">3. 기술 스택 총람</h2>
+      <p class="sec-note">기능별 세부 스택은 각 카드의 <span class="chip tech" style="padding:1px 8px">tech</span> 칩에 표기. 아래는 전체 요약.</p>
+      <table class="stack">
+        <thead><tr><th>레이어</th><th>스택</th><th>역할</th></tr></thead>
+        <tbody>
+          <tr><td>Frontend</td><td>React 19 · TypeScript · Vite</td><td class="m">SPA 렌더링 · 타입 안전 · 번들/HMR</td></tr>
+          <tr><td>Map/Viz</td><td>React Flow (@xyflow/react) · d3</td><td class="m">인과 지도 노드/엣지 렌더 · 드래그 레이아웃</td></tr>
+          <tr><td>State</td><td>Zustand (+persist)</td><td class="m">전역 스토어 · 셀렉터 · sessionStorage 지속</td></tr>
+          <tr><td>Routing</td><td>react-router-dom v7</td><td class="m">프로젝트/거버넌스 라우트</td></tr>
+          <tr><td>Test (FE)</td><td>Vitest · Testing Library · jsdom</td><td class="m">컴포넌트/스토어/E2E 유사 테스트</td></tr>
+          <tr><td>Backend</td><td>FastAPI · Pydantic · Uvicorn</td><td class="m">HTTP API · 스키마 검증 · ASGI</td></tr>
+          <tr><td>ORM/DB</td><td>SQLAlchemy · SQLite / Postgres</td><td class="m">Node/Edge/Setting/Message 영속</td></tr>
+          <tr><td>Agent graph</td><td>LangGraph (checkpointer)</td><td class="m">티켓별 상태기계 · HITL interrupt/resume</td></tr>
+          <tr><td>LLM/RAG</td><td>LangChain · Anthropic · embeddings</td><td class="m">planner/executor/intent · 기억 검색</td></tr>
+          <tr><td>Test (BE)</td><td>pytest · TestClient</td><td class="m">라우터/서비스/그래프 단위·통합</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ============================ RECENT FEATURES ============================ -->
+    <section id="recent">
+      <h2 class="sec">4. 최근 추가 기능 <span class="dom" style="color:#ffd479;background:rgba(255,212,121,.12);border-color:rgba(255,212,121,.35)">2026-07-01</span></h2>
+      <p class="sec-note">v1 이후 추가된 3개 기능. 각 기능은 아래 상세 섹션(FE/BE)에도 반영되어 있다.</p>
+      <div class="cards">
+        <div class="card">
+          <div class="top"><h4>① 티켓 id = <code>{slug}-{번호}</code> 자동 증가</h4><span class="path">store.next_ticket_id · domain/graph.nextTicketId</span></div>
+          <p class="what">모든 티켓 생성 경로(프로젝트 승인 · steer <code>scope</code> · UI 새 목표)가 <b>일관된 <code>{slug}-{n}</code></b> 형식으로 id를 부여한다. n = 기존 최대 티켓 번호 + 1(auto-increment, 충돌 안전). 예전 UI 경로의 불투명한 <code>t-{timestamp}</code>를 없앴고, 정렬 정규식은 <code>-t?(\d+)$</code>로 <b>레거시 <code>-t{n}</code>도 호환</b>. 프론트 <code>nextTicketId</code>가 백엔드 <code>next_ticket_id</code>를 미러한다.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">SQLAlchemy</span><span class="chip tech">re</span><span class="chip tech">TypeScript</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">auto-increment id</span><span class="chip concept">collision-safe numbering</span><span class="chip concept">backward-compatible parse</span><span class="chip concept">FE/BE 규칙 미러</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>② 모델명 도움말 아이콘</h4><span class="path">governance/ModelsPage.tsx</span></div>
+          <p class="what">거버넌스 모델 라우팅 카드의 <b>? 아이콘</b>을 누르면 팝오버로 <b>사용 가능한 model 이름 공식 문서</b>가 뜬다 — Claude 모델명(Anthropic docs, claude CLI·anthropic-api), OpenAI 모델명(codex CLI), Codex CLI 문서. 새 탭으로 열리며 <code>rel="noopener noreferrer"</code>.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">React useState 팝오버</span><span class="chip tech">CSS</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">contextual help affordance</span><span class="chip concept">aria-expanded 토글</span><span class="chip concept">safe external link</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>③ 프로젝트 삭제 (+디렉터리 옵션)</h4><span class="path">DELETE /projects/{pid} · home/ProjectsHome.tsx</span></div>
+          <p class="what">랜딩의 프로젝트 카드마다 <b>✕ 삭제</b> 버튼 → 확인 다이얼로그(체크박스: <b>실제 프로젝트 디렉터리도 삭제</b>). 삭제 시 매핑 데이터(모든 Node/Edge/Message) + 각 티켓의 LangGraph 체크포인트가 지워진다. 디렉터리 옵션을 켜면 executor가 커밋하던 <b>실제 레포 디렉터리도 rmtree</b>(루트/홈/cwd 조상은 거부하는 가드).</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">FastAPI DELETE</span><span class="chip tech">SQLAlchemy</span><span class="chip tech">shutil.rmtree</span><span class="chip tech">LangGraph delete_thread</span><span class="chip tech">React Modal</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">cascade delete</span><span class="chip concept">opt-in destructive action</span><span class="chip concept">path-safety guard</span><span class="chip concept">confirm dialog + checkbox</span><span class="chip concept">resolve-before-delete</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= PLACEHOLDERS: filled from inventory agents ================= -->
+    <!-- FE:MAP -->
+    <section id="fe-map">
+      <h2 class="sec">인과 지도 · 조종석 <span class="dom fe">FRONTEND</span></h2>
+      <p class="sec-note">줌아웃(Navigator 지도) ↔ 줌인(티켓 보드 / 3-pane 콕핏)으로 오가며 프로젝트 전체 인과를 본다.
+      <b>노드 종류→모양</b>, <b>상태→색</b> 두 축이 모든 표면을 색칠한다.</p>
+      <div class="cards">
+        <div class="card">
+          <div class="top"><h4>인과 지도 (Project Map)</h4><span class="path">map/ProjectMap.tsx</span></div>
+          <p class="what">프로젝트 전체를 인과 그래프로: 목표 상단, 티켓 백로그 순 좌→우, 티켓 아래로 Step·CodeRegion 레이어 선택 표시. 티켓 클릭=보드(계획이면 플랜 에디터), 노드 클릭=채널 필터. "리뷰 대기" 배너가 게이트 티켓을 지목.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">React Flow(@xyflow/react)</span><span class="chip tech">useMemo/useRef</span><span class="chip tech">Zustand</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">memoized 컬럼 레이아웃</span><span class="chip concept">custom node types</span><span class="chip concept">highlight/dim</span><span class="chip concept">레이어 auto-reveal</span><span class="chip concept">edge 접기(step→ticket)</span><span class="chip concept">spacer로 fitView 상단정렬</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>지도 레이아웃 드래그 저장</h4><span class="path">ProjectMap.tsx · saveLayout</span></div>
+          <p class="what">노드를 끌면 즉시 고정(스냅백 없음), 디바운스 저장 → 리로드·다른 기기에서도 위치 유지.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">useRef 타이머</span><span class="chip tech">React Flow drag cb</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">optimistic UI(localPos)</span><span class="chip concept">debounced batch write(500ms)</span><span class="chip concept">flush-on-unmount</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>노드 렌더러 (kind→shape)</h4><span class="path">map/nodeTypes.tsx</span></div>
+          <p class="what">종류별 카드: Objective(라이브 점)·Ticket(태그·상태 pill·활동 배지·진행바)·Step(번호 점)·Decision(다이아)·CodeRegion·Test·투명 Spacer.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">React Flow(Handle/NodeProps)</span><span class="chip tech">TypeScript</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">node-kind→shape 축</span><span class="chip concept">presentational component</span><span class="chip concept">dimmed prop</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>티켓 보드 (Kanban)</h4><span class="path">board/TicketBoard.tsx</span></div>
+          <p class="what">티켓의 step을 4열 칸반(PLANNED/EXECUTING/AWAITING REVIEW/DONE). blocked step은 needs-you 레인에 합류, 카드마다 "리뷰 시작/디버그 추적"으로 콕핏 진입. 헤더에 진행바 + 티켓 자율도 다이얼.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">React</span><span class="chip tech">Zustand</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">status→column 파생</span><span class="chip concept">ticketDisplayStatus 게이트 조정</span><span class="chip concept">neighbors 요약</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>콕핏 3-pane (Cockpit · Rail · Lane · Summary)</h4><span class="path">cockpit/ · lane/ · review/ReviewSummary</span></div>
+          <p class="what">줌인 워크스페이스: 좌 레일(지도 축약 리스트)·중앙 step 타임라인·우 리뷰 요약(선택 step 상태별 렌더). "전체 리뷰"로 ReviewPane 오픈.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">React</span><span class="chip tech">Zustand</span><span class="chip tech">useStepDetail</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">3-column 합성</span><span class="chip concept">status-driven 조건 렌더</span><span class="chip concept">orderedTickets 재사용</span><span class="chip concept">tests-connected guard</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>버그 트레이스 (BugTrace)</h4><span class="path">bugtrace/BugTrace.tsx</span></div>
+          <p class="what">상단바 파일/코드영역 검색 → 선택 시 소유 경로(CodeRegion→Step→Ticket→Objective)를 지도에 하이라이트, 나머지는 dim + 필요한 레이어 자동 표시.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">React</span><span class="chip tech">Zustand</span><span class="chip tech">api.owningPath</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">typeahead 자동완성</span><span class="chip concept">shared highlightIds 구동</span><span class="chip concept">blur-delay dropdown</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>범례 · 활동 배지</h4><span class="path">legend/Legend.tsx · ActivityBadge.tsx</span></div>
+          <p class="what">Legend: 두 축(kind→모양, status→색)을 명명한 팝오버. ActivityBadge: 진행 중(planning/executing)에만 뜨는 "지금 뭐하는 중" pill(스피너+경과초).</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">React interval tick</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">static axis reference</span><span class="chip concept">self-ticking counter</span><span class="chip concept">nodeActivity 타입 읽기</span></div>
+        </div>
+      </div>
+    </section>
+    <!-- FE:LIFECYCLE -->
+    <section id="fe-lifecycle">
+      <h2 class="sec">계획 · 리뷰 게이트 <span class="dom fe">FRONTEND</span></h2>
+      <p class="sec-note">목표 입력 → 플랜 결재 → step 실행 → 리뷰 게이트(승인/수정요청/인수)로 이어지는 HITL 결재 UI.</p>
+      <div class="cards">
+        <div class="card">
+          <div class="top"><h4>리뷰 게이트 (ReviewPane — 전체 리뷰)</h4><span class="path">review/ReviewPane.tsx</span></div>
+          <p class="what">step 전체화면 게이트: 좌 diff 뷰어, 우 이 step이 만든 맵-슬라이스(코드/테스트/결정)·근거·수용기준·테스트. 하단 승인/수정요청(코멘트)/인수, 단축키 <code>a</code>/<code>r</code>/<code>t</code>.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">React</span><span class="chip tech">Zustand</span><span class="chip tech">useStepDetail</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">keyboard shortcut(타이핑 중 무시)</span><span class="chip concept">discriminated-union ReviewAction</span><span class="chip concept">error-surfaced(실패 시 안 닫힘)</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>디프 뷰어 (DiffView)</h4><span class="path">review/DiffView.tsx</span></div>
+          <p class="what">파일별 탭 unified-diff 뷰어: NEW 파일 태깅, add/del/context 색칠. git 헤더·중복 마커 제거.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">React useState</span><span class="chip tech">TypeScript</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">순수 patch→rows 파싱</span><span class="chip concept">tab-controlled selection</span><span class="chip concept">new-file heuristic</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>스텝 상세 훅 (useStepDetail)</h4><span class="path">review/useStepDetail.ts</span></div>
+          <p class="what">step 상세(diff·수용기준·결정·생성 노드/엣지 id) 조회, 라이브 그래프가 바뀌면 자동 재조회.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">React hook</span><span class="chip tech">Zustand</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">live-sync 재조회(그래프 identity 의존)</span><span class="chip concept">stale-response guard(alive)</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>플랜 결재 (PlanApproval — step 편집·승인)</h4><span class="path">plan/PlanApproval.tsx</span></div>
+          <p class="what">티켓 step을 추가/삭제/재정렬 후 승인 → 실행 시작. 새 목표 제안 모드 &amp; 기존 계획 티켓 재계획 모드. 플래너 실행 중 경과초 스피너 + 클라이언트 타임아웃.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">React(useRef)</span><span class="chip tech">Zustand</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">initialize-once guard(라이브 리로드가 편집 안 지움)</span><span class="chip concept">mounted-ref async 안전</span><span class="chip concept">stable-ticket-id 재사용</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>프로젝트 초기화 / 새 목표 / 메타</h4><span class="path">home/ProjectInit · goal/GoalEntry · home/ProjectMetaEditor</span></div>
+          <p class="what">랜딩 "분해 시작": 플래너가 {slug,title,tickets} 제안 → 편집·승인 → 프로젝트 생성. GoalEntry는 기존 프로젝트에 새 목표 모달, MetaEditor는 제목/설명 수정.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">React</span><span class="chip tech">Zustand</span><span class="chip tech">controlled forms</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">3-phase 상태기계(loading/edit/done)</span><span class="chip concept">init-once + mounted guard</span><span class="chip concept">idempotent-on-slug create</span><span class="chip concept">double-submit guard</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>프로젝트 홈 (ProjectsHome)</h4><span class="path">home/ProjectsHome.tsx</span></div>
+          <p class="what">"/" 랜딩: 새-목표 카드 + 전체 프로젝트 목록(제목·티켓/step 수·리뷰대기 배지·설명). 클릭 시 그 프로젝트 맵으로 라우팅. 카드마다 <b>✕ 삭제</b>(신규) → 확인 다이얼로그(디렉터리 삭제 체크박스) → <code>deleteProject</code>.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">React</span><span class="chip tech">react-router-dom</span><span class="chip tech">Zustand</span><span class="chip tech">Modal</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">list fetch + refresh</span><span class="chip concept">modal-driven creation</span><span class="chip concept">opt-in destructive action</span></div>
+        </div>
+      </div>
+    </section>
+    <!-- FE:CHANNEL -->
+    <section id="fe-channel">
+      <h2 class="sec">대화 채널 · Steer <span class="dom fe">FRONTEND</span></h2>
+      <p class="sec-note">오른쪽 레일. 에이전트가 먼저 말 거는 타입 메시지 + 사람이 자유 NL로 조종(steer)하는 양방향 대화.</p>
+      <div class="cards">
+        <div class="card">
+          <div class="top"><h4>대화 채널 (ChannelPanel)</h4><span class="path">channel/ChannelPanel.tsx</span></div>
+          <p class="what">라이프사이클 진행에 따라 쌓이는 타입 메시지(가정/막힘/결정/리뷰/지시/시스템/되물음). review 메시지엔 인라인 승인/수정요청/인수. 지도 노드 클릭이 걸어둔 필터로 한 노드 스레드만, ref chip은 지도로 되돌아가 노드 하이라이트. 최신으로 자동 스크롤.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">React(useMemo/useRef)</span><span class="chip tech">Zustand</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">typed-message 렌더</span><span class="chip concept">파생 thread 필터(티켓=ticket+소유 step/decision via neighbors)</span><span class="chip concept">"step별 최신 review만 라이브"</span><span class="chip concept">ref-chip↔map round-trip</span><span class="chip concept">sub-component 합성</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>Steer 입력 (자연어 지시)</h4><span class="path">ChannelPanel.tsx · SteerInput</span></div>
+          <p class="what">채널 하단 상시 입력. 자유 NL을 그래프 op(redirect/constrain/answer/control/clarify)로 라우팅, 현재 티켓/step 선택에 스코프. 전송 후 결과 메시지 pull.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">React controlled form</span><span class="chip tech">Zustand</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">controlled input</span><span class="chip concept">busy-guarded submit</span><span class="chip concept">selection-as-scope</span><span class="chip concept">optimistic message pull</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>채널 리뷰 액션 (ReviewActions)</h4><span class="path">ChannelPanel.tsx · ReviewActions</span></div>
+          <p class="what">라이브 review 메시지에 박힌 승인/수정요청/인수 — 동일 <code>reviewStep</code> 흐름 재사용. 더 이상 액션 불가한 step은 숨김(처리됨).</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">React</span><span class="chip tech">Zustand</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">actionability guard(라이브 상태)</span><span class="chip concept">shared review flow 재사용</span></div>
+        </div>
+      </div>
+    </section>
+    <!-- FE:GOV -->
+    <section id="fe-governance">
+      <h2 class="sec">거버넌스 · 자율도 <span class="dom fe">FRONTEND</span></h2>
+      <p class="sec-note">모든 AI 호출의 <b>무엇을</b>(규칙) + <b>누가</b>(모델 라우팅) + <b>얼마나 자율적으로</b>(throttle)를 사람이 통제하는 화면.</p>
+      <div class="cards">
+        <div class="card">
+          <div class="top"><h4>규칙 페이지 (RulesPage)</h4><span class="path">governance/RulesPage.tsx</span></div>
+          <p class="what">글로벌 기본 + 프로젝트 오버라이드 규칙(coding→executor, planning→planner) 편집 + 실제 주입되는 resolved(병합·읽기전용) 미리보기.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">React</span><span class="chip tech">react-router-dom(useParams)</span><span class="chip tech">Zustand</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">재사용 RulesCard(로컬 draft)</span><span class="chip concept">3-scope view</span><span class="chip concept">route-param refetch</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>모델 라우팅 페이지 (ModelsPage)</h4><span class="path">governance/ModelsPage.tsx</span></div>
+          <p class="what">개입 지점별 라우팅 테이블(transport+model), 글로벌/프로젝트 스코프 스위치 + resolved 열, transport별 헬스 스트립(CLI 설치/API 키 존재 — 상태만, 비밀 없음). <b>? 도움말 아이콘</b>(신규): 사용 가능한 model 이름 공식 문서 링크(Claude·OpenAI·Codex CLI) 팝오버.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">React</span><span class="chip tech">select/table 폼</span><span class="chip tech">Zustand</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">스코프별 draft seed</span><span class="chip concept">override&gt;global 표시</span><span class="chip concept">availability chips(wired/stub)</span><span class="chip concept">contextual help</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>거버넌스 레이아웃 (GovernanceLayout)</h4><span class="path">governance/GovernanceLayout.tsx</span></div>
+          <p class="what">거버넌스 페이지 공통 크롬 — 브레드크럼 + Rules/Models 탭 전환 + 리드 텍스트.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">React</span><span class="chip tech">react-router-dom</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">children 합성 layout</span><span class="chip concept">aria-current 탭</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>자율도 다이얼 (프로젝트 · 티켓)</h4><span class="path">AutonomyDial.tsx · TicketAutonomyDial.tsx</span></div>
+          <p class="what">상단바 프로젝트 3-way throttle(매 step/부조종/자동) + 보드/콕핏 헤더의 티켓별 다이얼(오버라이드 설정, resolved 표시, ·상속 표기).</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">React(useEffect)</span><span class="chip tech">Zustand</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">segmented control</span><span class="chip concept">ticket&gt;project&gt;global resolution</span><span class="chip concept">project 변경 시 refetch(상속 최신화)</span><span class="chip concept">alive-guard</span></div>
+        </div>
+      </div>
+    </section>
+    <!-- FE:CROSS -->
+    <section id="fe-cross">
+      <h2 class="sec">공통 — 상태 · 시드 · 라우팅 <span class="dom fe">FRONTEND</span></h2>
+      <p class="sec-note">모든 화면이 공유하는 뼈대: 어댑터 seam · 라이브 동기화 · 지속 전략 · 두 축 도메인 모델.</p>
+      <div class="cards">
+        <div class="card">
+          <div class="top"><h4>라우팅 &amp; 앱 진입점</h4><span class="path">main.tsx · App.tsx</span></div>
+          <p class="what">경로 라우팅 SPA. <code>/</code>=랜딩, <code>/project/:pid</code>=맵/콕핏, <code>/project/:pid/rules|models</code>=거버넌스. 미지 경로는 <code>/</code>로.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">react-router-dom v7</span><span class="chip tech">React StrictMode</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">declarative routing</span><span class="chip concept">top-level ErrorBoundary</span><span class="chip concept">전역 unhandledrejection→토스트</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>Shell (상단바 · 고도 전환 · 라이브 상태)</h4><span class="path">Shell.tsx</span></div>
+          <p class="what">프로젝트 프레임: 브레드크럼·BugTrace·자율도 다이얼·live/offline 배지+세션 시계·Navigator↔Cockpit 토글·거버넌스/채널/범례 버튼. 모든 모달과 전체화면 리뷰 오버레이 오케스트레이션.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">React</span><span class="chip tech">Zustand selectors</span><span class="chip tech">react-router-dom</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">파생 view 상태(map/board/cockpit)</span><span class="chip concept">route-param→store sync</span><span class="chip concept">unread 배지 카운팅</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>ApiClient 어댑터 seam (mock ↔ http)</h4><span class="path">api/ApiClient.ts · mock/ · http/ · dto.ts</span></div>
+          <p class="what">모든 화면이 <code>ApiClient</code> 인터페이스 하나에만 의존. <code>MockApiClient</code>(브라우저 시뮬레이션 + 목 NL 분류기)와 <code>HttpApiClient</code>(실 REST)를 <code>VITE_API_BASE</code>로 런타임 교체 → UI가 완전 오프라인으로도 구동.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">TypeScript interface</span><span class="chip tech">fetch</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">adapter/seam 패턴</span><span class="chip concept">mock가 backend 미러(dedup/idempotent)</span><span class="chip concept">dependency inversion</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>라이브 동기화 (subscribe→reload)</h4><span class="path">useStore.ts · HttpApiClient</span></div>
+          <p class="what">수동 새로고침 없음. <code>subscribe(cb)</code>가 1.5s 폴링(탭 숨김 시 중단), 매 틱 <code>load+loadMessages+loadAutonomy</code>. 모든 쓰기 후 <code>notify()</code>로 즉시 재로드. getGraph는 ETag 304 재사용 + JSON 동일 시 referential identity 보존.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">setInterval</span><span class="chip tech">Zustand</span><span class="chip tech">Page Visibility</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">observer(subscribe/notify)</span><span class="chip concept">optimistic write→reload</span><span class="chip concept">conditional GET 캐시</span><span class="chip concept">referential-identity 안정화</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>상태 지속 &amp; pid 가드</h4><span class="path">useStore.ts (persist)</span></div>
+          <p class="what">Zustand + <code>persist(sessionStorage)</code>. <code>partialize</code>는 <b>내비게이션만</b>(mode/selectedTicketId/selectedStepId) 지속 → 리로드 시 콕핏/선택 복원, 그래프/메시지/자율도는 항상 새로 페치. 느린 응답 pid 가드로 이전 프로젝트 응답 폐기. 채널은 <code>since</code> 커서+dedup 증분 폴링.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">zustand/persist</span><span class="chip tech">sessionStorage</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">selective persistence(partialize)</span><span class="chip concept">stale-response pid guard</span><span class="chip concept">cursor+dedup 폴링</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>도메인 모델 — 두 축이 UI를 구동</h4><span class="path">domain/graph.ts · design/tokens.css</span></div>
+          <p class="what"><code>NodeKind/EdgeKind/Status</code> + 파생(<code>neighbors</code>·<code>ticketDisplayStatus</code>·<code>ticketOrder/orderedTickets</code>·<code>nodeActivity</code>·<code>ownerTicketId</code>). <b>kind→모양</b>은 nodeTypes/아이콘, <b>status→색</b>은 tokens.css 하나가 map·board·lane·cockpit·review·legend 전부에 동일 적용.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">TypeScript</span><span class="chip tech">CSS custom properties</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">two-axis visual encoding</span><span class="chip concept">single source of truth(토큰)</span><span class="chip concept">derived selectors</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>공유 프리미티브 (Modal · icons · tokens)</h4><span class="path">Modal.tsx · icons.tsx · design/tokens.css</span></div>
+          <p class="what">Modal: Esc/백드롭 닫기(요청 중 <code>dismissable=false</code>로 잠금). icons: lucide-style 인라인 SVG 팩토리(currentColor). tokens: status→색 축의 단일 소스.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">React portal-less overlay</span><span class="chip tech">SVG</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">dismissable gating</span><span class="chip concept">icon-factory 패턴</span><span class="chip concept">aria-modal</span></div>
+        </div>
+      </div>
+    </section>
+    <!-- BE:API -->
+    <section id="be-api">
+      <h2 class="sec">HTTP API 엔드포인트 <span class="dom be">BACKEND</span></h2>
+      <p class="sec-note">FastAPI 라우터가 노출하는 전체 HTTP 표면. 인증 없음(단일 사용자 가정, CORS 전면 허용). 모든 라우트는
+      <code>Depends(get_session)</code>로 DB 세션을 주입받고, 미들웨어가 미처리 예외를 <code>500</code>으로 로깅한다.</p>
+
+      <h3 class="grp">그래프 · 맵 <span class="k">routers/graph.py · /projects/{pid}</span></h3>
+      <div class="cards">
+        <div class="card">
+          <div class="top"><h4>프로젝트 그래프 조회</h4><span class="path">routers/graph.py</span></div>
+          <span class="ep">GET /projects/{pid}/graph</span>
+          <p class="what">맵 뷰용 전체 노드/엣지 그래프. 프로젝트별 revision 카운터로 weak ETag를 만들어 <code>If-None-Match</code>에 <b>304</b>로 응답 — 유휴 폴링 시 DB 읽기·직렬화를 건너뛴다.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">FastAPI</span><span class="chip tech">Pydantic</span><span class="chip tech">SQLAlchemy</span><span class="chip tech">Starlette Response</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">conditional GET / weak ETag</span><span class="chip concept">revision counter</span><span class="chip concept">boot-nonce 무효화</span><span class="chip concept">dependency injection</span><span class="chip concept">field alias(from→from_)</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>스텝 상세 조회</h4><span class="path">routers/graph.py</span></div>
+          <span class="ep">GET /projects/{pid}/steps/{sid}</span>
+          <p class="what">한 step의 파일별 diff·결정·수용기준·생성된 노드/엣지 id를 리뷰 페인용으로 반환. 미지/구식 id는 404.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">FastAPI</span><span class="chip tech">Pydantic(StepDetailOut)</span><span class="chip tech">SQLAlchemy</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">null-lookup guard</span><span class="chip concept">DI</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>노드 소유 경로 조회</h4><span class="path">routers/graph.py</span></div>
+          <span class="ep">GET /projects/{pid}/owning-path/{nid:path}</span>
+          <p class="what">노드를 소유한 조상 체인(objective→ticket→step)을 브레드크럼/포커스용으로 반환. <code>:path</code> 컨버터로 id 내 슬래시 캡처.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">FastAPI</span><span class="chip tech">SQLAlchemy</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">path-converter param</span><span class="chip concept">ancestor traversal</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>맵 레이아웃 저장</h4><span class="path">routers/graph.py</span></div>
+          <span class="ep">POST /projects/{pid}/layout</span>
+          <p class="what">드래그로 옮긴 노드 좌표를 <code>node.data.pos</code>에 영속 → 리로드/다른 기기에서 레이아웃 복원.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">FastAPI</span><span class="chip tech">Pydantic(LayoutIn)</span><span class="chip tech">SQLAlchemy</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">dict-of-DTO body</span><span class="chip concept">JSON 컬럼 재대입</span></div>
+        </div>
+      </div>
+
+      <h3 class="grp">프로젝트 생성 · 메타 <span class="k">routers/projects.py · /projects</span></h3>
+      <div class="cards">
+        <div class="card">
+          <div class="top"><h4>프로젝트 목록</h4><span class="path">routers/projects.py</span></div>
+          <span class="ep">GET /projects</span>
+          <p class="what">Objective 하나당 프로젝트 하나 — 랜딩 목록.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">FastAPI</span><span class="chip tech">SQLAlchemy</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">DI</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>프로젝트 계획 제안</h4><span class="path">routers/projects.py</span></div>
+          <span class="ep">POST /projects/plan</span>
+          <p class="what">거친 목표 → <code>{slug,title,tickets[]}</code> 제안(project-planner 엔진). 아무것도 저장하지 않고 slug만 사전 dedup.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">FastAPI</span><span class="chip tech">LLM planner(governance)</span><span class="chip tech">SQLAlchemy</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">request-thread governance resolution</span><span class="chip concept">stateless propose</span><span class="chip concept">deterministic simulation</span><span class="chip concept">slug 사전 dedup</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>프로젝트 승인/생성</h4><span class="path">routers/projects.py</span></div>
+          <span class="ep">POST /projects/approve</span>
+          <p class="what">Objective(id=slug)+티켓(planning)+<code>has</code> 엣지 실체화. 동일 slug 재승인은 no-op 병합(중복 없음).</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">FastAPI</span><span class="chip tech">Pydantic</span><span class="chip tech">SQLAlchemy</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">idempotent create/merge</span><span class="chip concept">slugify 정규화</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>프로젝트 메타 편집</h4><span class="path">routers/projects.py</span></div>
+          <span class="ep">POST /projects/{pid}/meta</span>
+          <p class="what">생성 후 제목/설명 조회·수정(Objective.label/data). None=유지, ""=삭제. 없으면 404.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">FastAPI</span><span class="chip tech">Pydantic</span><span class="chip tech">SQLAlchemy</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">partial update 시맨틱</span><span class="chip concept">HTTPException guard</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>프로젝트 삭제 <span class="dom" style="color:#ffd479;background:rgba(255,212,121,.12);border-color:rgba(255,212,121,.35)">NEW</span></h4><span class="path">routers/lifecycle.py</span></div>
+          <span class="ep">DELETE /projects/{pid}?delete_directory=false</span>
+          <p class="what">프로젝트의 모든 매핑 데이터(Node/Edge/Message) + 각 티켓의 LangGraph 체크포인트를 삭제. <code>?delete_directory=true</code>면 executor가 커밋하던 <b>실제 레포 디렉터리도 제거</b>(가드된 rmtree). 없으면 404. Objective(오버라이드) 삭제 전에 repo 경로를 먼저 해석.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">FastAPI</span><span class="chip tech">SQLAlchemy</span><span class="chip tech">shutil.rmtree</span><span class="chip tech">LangGraph delete_thread</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">cascade delete</span><span class="chip concept">opt-in destructive</span><span class="chip concept">path-safety guard</span><span class="chip concept">resolve-before-delete</span></div>
+        </div>
+      </div>
+
+      <h3 class="grp">티켓 라이프사이클 · 실행 <span class="k">routers/lifecycle.py · /projects/{pid}</span></h3>
+      <div class="cards">
+        <div class="card">
+          <div class="top"><h4>계획 시작 — step 제안</h4><span class="path">routers/lifecycle.py</span></div>
+          <span class="ep">POST /projects/{pid}/tickets/{tid}/plan</span>
+          <p class="what">LangGraph 플래너가 step을 제안하고 <code>plan_approval</code> interrupt에 정차. 재계획은 기존 step에서 시드, 승인 전까지 계획은 체크포인트에만 존재(고아 티켓 없음).</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">FastAPI</span><span class="chip tech">LangGraph(interrupt)</span><span class="chip tech">SQLAlchemy</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">HITL interrupt</span><span class="chip concept">lock-free propose</span><span class="chip concept">checkpoint-as-source-of-truth</span><span class="chip concept">live activity 기록</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>계획 승인 → 실행</h4><span class="path">routers/lifecycle.py</span></div>
+          <span class="ep">POST /projects/{pid}/tickets/{tid}/plan/approve</span>
+          <p class="what"><code>Command(resume=approve)</code>로 step 영속 + 실행 시작. async 모드는 즉시 반환 후 백그라운드 스레드 실행, sync 모드(테스트)는 in-request. 완료 reconcile + 최종 done 시 프로젝트 promote.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">LangGraph(resume)</span><span class="chip tech">threading</span><span class="chip tech">git commit</span><span class="chip tech">SQLAlchemy</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">HITL resume</span><span class="chip concept">async vs sync exec</span><span class="chip concept">commit-before-spawn</span><span class="chip concept">per-project exec lock</span><span class="chip concept">CP1 throttle 자율진행</span><span class="chip concept">post-run reconciliation</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>리뷰 게이트 결재</h4><span class="path">routers/lifecycle.py</span></div>
+          <span class="ep">POST /projects/{pid}/steps/{sid}/review</span>
+          <p class="what"><b>approve</b>=완료+다음 step 실행, <b>changes</b>=리뷰 노트로 재실행, <b>takeover</b>=사람 인수 대기. 라이브 interrupt가 없으면(시드/종료 그래프) DB 직결 폴백. 대기 게이트 없으면 409.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">LangGraph</span><span class="chip tech">threading</span><span class="chip tech">git diff ingest</span><span class="chip tech">SQLAlchemy</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">HITL review gate</span><span class="chip concept">dual path(interrupt/DB-direct)</span><span class="chip concept">optimistic status pre-write</span><span class="chip concept">autonomy-aware finalize</span><span class="chip concept">CP2 channel emit</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>티켓 상태 조회</h4><span class="path">routers/lifecycle.py</span></div>
+          <span class="ep">GET /projects/{pid}/tickets/{tid}/state</span>
+          <p class="what">체크포인트 파생 스냅샷: 다음 노드·done 플래그·현재 인덱스·steps·대기 interrupt(<code>awaiting</code>). 읽기 전용, lock-free.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">FastAPI</span><span class="chip tech">LangGraph get_state</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">interrupt payload 노출</span><span class="chip concept">lock-free read</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>대상 레포 조회 / 설정</h4><span class="path">routers/lifecycle.py</span></div>
+          <span class="ep">GET /projects/{pid}/info</span><span class="ep">POST /projects/{pid}/repo</span>
+          <p class="what">executor가 커밋할 타깃 git 레포 경로 해석/오버라이드. 우선순위: Objective 오버라이드 → <code>ASV3_WORKSPACE_DIR</code> → 레거시 → 기본 <code>.asv3-workspace</code>. 설정 시 lazy git-init.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">FastAPI</span><span class="chip tech">Pydantic</span><span class="chip tech">env precedence</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">precedence chain</span><span class="chip concept">clear-to-default</span><span class="chip concept">side-effect-free resolve</span></div>
+        </div>
+      </div>
+
+      <h3 class="grp">거버넌스 — 규칙 · 모델 · 자율도 <span class="k">routers/governance.py</span></h3>
+      <div class="cards">
+        <div class="card">
+          <div class="top"><h4>규칙 (글로벌 · 프로젝트)</h4><span class="path">routers/governance.py</span></div>
+          <span class="ep">GET·PUT /rules</span><span class="ep">GET·PUT /projects/{pid}/rules</span>
+          <p class="what">프롬프트에 주입되는 coding·planning 규칙. 프로젝트 뷰는 override+global+resolved(병합) 3-view. 축별 부분 수정(None=유지).</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">FastAPI</span><span class="chip tech">Pydantic</span><span class="chip tech">SQLAlchemy</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">governance resolution(project→global)</span><span class="chip concept">3-view</span><span class="chip concept">per-axis partial update</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>모델 라우팅 (글로벌 · 프로젝트) + 가용성</h4><span class="path">routers/governance.py</span></div>
+          <span class="ep">GET·PUT /models</span><span class="ep">GET /models/available</span><span class="ep">GET·PUT /projects/{pid}/models</span>
+          <p class="what">개입 지점별 엔진(transport+model) 라우팅 테이블. 가용성은 CLI PATH/API 키 <b>존재 여부만</b> 보고(비밀값 미노출). resolved = project→global→env.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">FastAPI</span><span class="chip tech">Pydantic(EngineSpec)</span><span class="chip tech">SQLAlchemy</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">per-point engine resolution</span><span class="chip concept">capability/health probe</span><span class="chip concept">secret-presence-not-value</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>자율도 (글로벌 · 프로젝트 · 티켓)</h4><span class="path">routers/governance.py</span></div>
+          <span class="ep">GET·PUT /autonomy</span><span class="ep">GET·PUT /projects/{pid}/autonomy</span><span class="ep">GET·PUT /projects/{pid}/tickets/{tid}/autonomy</span>
+          <p class="what">throttle(auto·co-pilot·per-step) 3계층 오버라이드. resolved = <b>ticket→project→global</b>(CP4). null/무효 오버라이드는 상속으로 clear. 티켓 GET/PUT은 비-티켓/부재 노드에 대칭 404.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">FastAPI</span><span class="chip tech">Pydantic</span><span class="chip tech">SQLAlchemy</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">4-level resolution chain</span><span class="chip concept">override-clear-to-inherit</span><span class="chip concept">kind-guarded lookup</span></div>
+        </div>
+      </div>
+
+      <h3 class="grp">채널 · 메모리 · Steer <span class="k">routers/channel.py · memory.py · steer.py</span></h3>
+      <div class="cards">
+        <div class="card">
+          <div class="top"><h4>채널 메시지 폴링</h4><span class="path">routers/channel.py</span></div>
+          <span class="ep">GET /projects/{pid}/messages?since={id}</span>
+          <p class="what">프로젝트 대화 채널을 오래된→최신 순으로. <code>since</code>로 신규분만 증분 폴링. 타입: assumption/blocked/decision/review/steer/system/clarify.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">FastAPI</span><span class="chip tech">Pydantic(MessageOut)</span><span class="chip tech">SQLAlchemy</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">cursor pagination(monotonic id)</span><span class="chip concept">incremental polling</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>메모리 검색 / 재색인 (RAG)</h4><span class="path">routers/memory.py</span></div>
+          <span class="ep">GET /memory/search?q=&amp;k=4</span><span class="ep">POST /memory/reindex/{project_id}</span>
+          <p class="what">쿼리에 의미적으로 유사한 top-k 기억 검색 · 프로젝트 decision 노드 일괄 임베딩. 실모드는 PGVector, 아니면 in-memory(첫 사용 시 lazy 초기화).</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">LangChain embeddings</span><span class="chip tech">PGVector</span><span class="chip tech">FastAPI</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">lazy first-use init</span><span class="chip concept">env-gated backend</span><span class="chip concept">vector similarity retrieval</span><span class="chip concept">batch reindex</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>Steer — 자유 NL → 그래프 op</h4><span class="path">routers/steer.py</span></div>
+          <span class="ep">POST /projects/{pid}/steer</span>
+          <p class="what">사람의 자유 지시를 채널에 기록 → intent-router가 <b>7개 고정 op</b>(redirect·constrain·reprioritize·scope·answer·control·clarify) 중 하나로 분류·디스패치. 빈 텍스트 400.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">FastAPI</span><span class="chip tech">LLM intent-router</span><span class="chip tech">LangGraph(delete_thread)</span><span class="chip tech">LangChain memory</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">NL→fixed-op dispatch</span><span class="chip concept">clarify-instead-of-guess</span><span class="chip concept">deterministic scope 매칭</span><span class="chip concept">machinery 재사용</span><span class="chip concept">checkpoint 동기화</span><span class="chip concept">audit trail</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>헬스 체크</h4><span class="path">main.py</span></div>
+          <span class="ep">GET /health</span>
+          <p class="what">라이브니스 프로브 <code>{"status":"ok"}</code>.</p>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">liveness endpoint</span></div>
+        </div>
+      </div>
+
+      <div class="callout" style="margin-top:20px">
+        <b>API 공통 관심사:</b> 인증 없음(단일 사용자, CORS <code>*</code>) · <code>_CatchAllMiddleware</code>가 미처리 예외를 CORS 헤더 유지한 채 500으로 변환 ·
+        명시적 <code>HTTPException</code> 404/409/400 · <code>ETag</code>는 CORS-expose되어 브라우저가 <code>If-None-Match</code> 재전송 가능.
+        비밀값(API 키)은 절대 노출 안 함 — 존재/헬스만.
+      </div>
+    </section>
+    <!-- BE:LIFECYCLE -->
+    <section id="be-lifecycle">
+      <h2 class="sec">라이프사이클 상태기계 <span class="dom int">INTERNAL</span></h2>
+      <p class="sec-note">티켓마다 LangGraph <code>StateGraph</code>: <code>propose → approve(gate) → execute_step → review(gate) → … → END</code>. 두 개의 HITL interrupt(계획 승인 · 리뷰)가 사람의 결재를 기다린다.</p>
+      <div class="cards">
+        <div class="card">
+          <div class="top"><h4>StateGraph — 티켓 라이프사이클</h4><span class="path">services/lifecycle_graph.py</span></div>
+          <p class="what">노드 <code>propose/approve/execute_step/review</code> + 라우터 <code>after_approve/after_review</code>. <code>TicketState</code>(TypedDict)에 steps·current·decisions·last_ok·<b>autonomy(체크포인트됨)</b>·review_comment 등을 실어 나른다.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">LangGraph(StateGraph/interrupt)</span><span class="chip tech">TypedDict</span><span class="chip tech">Protocol/Callable</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">state machine</span><span class="chip concept">HITL interrupt/resume</span><span class="chip concept">checkpointing</span><span class="chip concept">dependency injection(planner/executor/cb 주입)</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>자율도-조건부 리뷰 게이트 (CP1)</h4><span class="path">lifecycle_graph.py · review node</span></div>
+          <p class="what"><code>approve</code>는 항상 interrupt(계획 게이트). <code>review</code>는 <code>must_stop = per-step OR !last_ok OR review_needed OR (co-pilot AND is_last)</code>일 때만 정지. auto=성공 시 무정지(티켓 한 invoke), co-pilot=실패/최종만 정지, per-step=매 step.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">LangGraph conditional edges</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">policy-driven gating</span><span class="chip concept">autonomy를 state에 체크포인트(중간 다이얼 변경에도 결정적 재현)</span><span class="chip concept">re-run only interrupting node</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>라이프사이클 오케스트레이션 (API 드라이버)</h4><span class="path">routers/lifecycle.py</span></div>
+          <p class="what"><code>_build</code>(그래프 조립)·<code>start_plan</code>·<code>approve_plan</code>·<code>review_step</code>·<code>resume_step_review</code>·finalizer들. 그래프↔DB를 콜백으로 배선하고, async 워커/락/거버넌스 해석을 관장.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">FastAPI</span><span class="chip tech">LangGraph Command</span><span class="chip tech">threading</span><span class="chip tech">git subprocess</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">per-project exec lock(실행만 직렬화, 읽기/propose lock-free)</span><span class="chip concept">async 백그라운드 워커 + commit-before-spawn</span><span class="chip concept">request-thread governance 해석 후 워커에 전달</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>콜백 배선 · Finalizer · 폴백</h4><span class="path">lifecycle.py · on_step_committed 등</span></div>
+          <p class="what"><code>on_steps_approved</code>→approve_plan, <code>on_step_start</code>→executing, <code>on_step_committed</code>→diff 인제스트+상태 전이+decision 노드/RAG 색인+채널 메시지. auto/co-pilot 다중 step 후 finalizer가 DB 정합화, 최종 done 시 <code>promote_project</code>.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">SQLAlchemy(워커 세션)</span><span class="chip tech">git diff ingest</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">graph→DB 콜백 브리지</span><span class="chip concept">post-run reconciliation</span><span class="chip concept">DB-direct review 폴백(silent-409 dead gate 회피)</span><span class="chip concept">optimistic status pre-write</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>대상 레포 해석 · 시뮬레이션 쓰기</h4><span class="path">lifecycle.py · _resolve_repo_path · _sim_write</span></div>
+          <p class="what">executor가 커밋할 레포: Objective 오버라이드 → <code>$ASV3_WORKSPACE_DIR/{pid}</code> → 레거시 → 기본. lazy <code>git init</code>+빈 초기 커밋. sim 모드는 <code>generated/{tid}/step_N.ts</code>로 티켓별 네임스페이스.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">pathlib</span><span class="chip tech">subprocess git</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">precedence chain</span><span class="chip concept">lazy init</span><span class="chip concept">deterministic simulation(실 커밋 생성)</span></div>
+        </div>
+      </div>
+    </section>
+    <!-- BE:SERVICES -->
+    <section id="be-services">
+      <h2 class="sec">서비스 계층 <span class="dom int">INTERNAL</span></h2>
+      <p class="sec-note">거버넌스(규칙·모델·자율도) · intent/steer · 채널 · 프롬프트 빌더. 라우터는 선언적으로 유지하고 결정 로직은 여기 모은다.</p>
+      <div class="cards">
+        <div class="card">
+          <div class="top"><h4>규칙 주입 (coding + planning)</h4><span class="path">services/governance.py · prompt_build.py</span></div>
+          <p class="what">사람 관리 컨벤션 텍스트를 프롬프트에 주입 — coding은 executor step 프롬프트, planning은 planner 프롬프트 앞에. 글로벌 기본 + 프로젝트 오버라이드 <b>병합</b>(둘 다 적용).</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">SQLAlchemy(Setting/Node.data)</span><span class="chip tech">functools.lru_cache</span><span class="chip tech">pathlib</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">resolution chain(global+override append)</span><span class="chip concept">size-guard(20k, 글로벌 먼저 절단)</span><span class="chip concept">seed-from-file(비영속 기본)</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>모델 라우팅 테이블 (누가 각 지점을 실행)</h4><span class="path">services/governance.py</span></div>
+          <p class="what">5개 <b>POINT</b>별 <code>{transport,model}</code> 라우팅, project→global→env 순 해석. <code>ASV3_AGENT_MODE/BRAIN</code> + "키 있으면 API" 분기를 대체.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">SQLAlchemy</span><span class="chip tech">shutil.which</span><span class="chip tech">frozenset capability set</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">strategy pattern</span><span class="chip concept">tier-skip resolution(무효 오버라이드는 유효 global로 fall-through)</span><span class="chip concept">input validation(_clean_models)</span><span class="chip concept">capability gating(SUPPORTED/WIRED)</span><span class="chip concept">single-query hot path</span></div>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">POINTS: project-planner·ticket-planner·executor·intent-router·agent-message-gen</span><span class="chip tech">DEFAULT=claude-opus-4-8</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>자율도 해석 (CP1 다이얼 + CP4 티켓)</h4><span class="path">services/governance.py</span></div>
+          <p class="what">throttle(auto/co-pilot/per-step, 기본 per-step)를 <b>ticket→project→global→env→default</b> 체인으로 해석.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">SQLAlchemy</span><span class="chip tech">os.environ(ASV3_THROTTLE)</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">resolution chain</span><span class="chip concept">clear-to-inherit</span><span class="chip concept">validation gate</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>엔진 팩토리 (transport→구체 엔진)</h4><span class="path">governance.py · make_planner/make_executor/make_intent_router</span></div>
+          <p class="what">라우팅 테이블이 구현 클래스를 만나는 유일한 지점 — 라우터는 governance에 엔진을 요청할 뿐 구체 클래스를 import하지 않음.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">Python 팩토리</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">factory pattern</span><span class="chip concept">dependency inversion</span><span class="chip concept">defensive fallback</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>Intent Router (Simulated vs LangChain)</h4><span class="path">services/intent.py</span></div>
+          <p class="what">자유 NL을 한 개 고정 op로 분류, 애매하면 <code>clarify</code>(추측 안 함). 규칙 우선순위 control &gt; constrain &gt; reprioritize &gt; scope &gt; redirect &gt; answer(문맥) &gt; clarify.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">re(키워드 규칙)</span><span class="chip tech">Protocol</span><span class="chip tech">LangChain+Anthropic(structured output)</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">strategy pattern(offline sim vs LLM)</span><span class="chip concept">ordered rule precedence</span><span class="chip concept">fail-safe degradation(에러→clarify)</span><span class="chip concept">bilingual dial parsing</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>Steer 디스패치 + op 실행기</h4><span class="path">routers/steer.py</span></div>
+          <p class="what">지시를 채널에 기록 → 분류 → op 실행기로 디스패치. 각 op는 기존 기계장치를 재사용하고 감사 메시지를 남김(redirect/constrain/reprioritize/scope/answer/control).</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">FastAPI</span><span class="chip tech">SQLAlchemy</span><span class="chip tech">re</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">command dispatch table</span><span class="chip concept">token-overlap 티켓 매칭</span><span class="chip concept">기존 machinery 재사용</span><span class="chip concept">checkpoint 동기화(redirect delete_thread)</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>대화 채널 서비스 (CP2)</h4><span class="path">services/channel.py</span></div>
+          <p class="what">라이프사이클 진행에 따라 타입 메시지를 append. <code>list_messages(since=)</code>가 증분 폴링 커서. <code>gen_text</code>는 결정적 한국어 템플릿(agent-message-gen 지점의 현재 구현).</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">SQLAlchemy(Message)</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">append-only log</span><span class="chip concept">monotonic-id cursor</span><span class="chip concept">deterministic template gen</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>프롬프트 빌더</h4><span class="path">services/prompt_build.py</span></div>
+          <p class="what">스코프된 step 프롬프트 조립: 고정된 Objective·티켓·step+수용기준·소유 CodeRegion·이전 Decision·RAG 패킷·coding 규칙·리뷰 노트 — 레포 전체가 아님.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">SQLAlchemy</span><span class="chip tech">graph.store.neighbors</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">context scoping</span><span class="chip concept">RAG 프롬프트 조립</span><span class="chip concept">conditional sections</span></div>
+        </div>
+      </div>
+    </section>
+    <!-- BE:GRAPH -->
+    <section id="be-graph">
+      <h2 class="sec">그래프 저장소 · Diff 인제스트 <span class="dom int">INTERNAL</span></h2>
+      <p class="sec-note">관계형 테이블 위의 프로퍼티 그래프(Node/Edge). diff는 코드/테스트 노드로 인제스트되고, 커밋마다 revision 카운터가 ETag를 갱신한다.</p>
+      <div class="cards">
+        <div class="card">
+          <div class="top"><h4>Node/Edge CRUD · 시드 · 조회</h4><span class="path">graph/store.py</span></div>
+          <p class="what"><code>seed_graph</code>·<code>create_project</code>(멱등)·<code>unique_slug</code>·<code>list_projects</code>·<code>set_project_meta</code>·<code>save_layout</code>·<code>get_graph</code>·<code>neighbors</code>·<code>step_detail</code>·<code>owning_path</code>.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">SQLAlchemy ORM</span><span class="chip tech">re</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">property-graph over relational</span><span class="chip concept">idempotent create/merge</span><span class="chip concept">JSON-column dirty tracking</span><span class="chip concept">404-not-500 방어</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>티켓 순서 · id 번호부여 · 삭제</h4><span class="path">store.py · ticket_order/next_ticket_id/add_ticket/delete_project</span></div>
+          <p class="what">티켓 id는 <code>{slug}-{n}</code>(<b>next_ticket_id</b> = 최대 번호+1, auto-increment·충돌안전; 정렬은 <code>-t?(\d+)$</code>로 레거시 <code>-t{n}</code> 호환). 순서는 명시 <code>data.order</code> 우선. <code>next_ticket</code>=최저-order non-done. <code>add_ticket</code>=백로그 끝. <b>delete_project</b>=프로젝트의 모든 Node/Edge/Message 삭제 후 티켓 id 목록 반환(체크포인트/디렉터리 후속 정리용).</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">SQLAlchemy</span><span class="chip tech">re</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">auto-increment id</span><span class="chip concept">backward-compatible parse</span><span class="chip concept">collision-safe</span><span class="chip concept">cascade delete</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>리뷰 · 계획승인 전이</h4><span class="path">store.py · review_step/approve_plan</span></div>
+          <p class="what">상태 맵 <code>{approve→done, changes→executing, takeover→awaiting_review}</code>. <code>approve_plan</code>은 티켓의 step 자식을 교체(옛 노드/엣지 삭제→<code>{tid}-s{n}</code> 생성), 필요 시 티켓·Objective까지 lazy 생성 후 executing.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">SQLAlchemy</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">status state map</span><span class="chip concept">children 원자 교체</span><span class="chip concept">lazy 생성</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>Diff 인제스트 (diff→code_region/test)</h4><span class="path">graph/diff_ingest.py · git/repo.py</span></div>
+          <p class="what">unified-diff 파싱 → 파일별 <code>TouchedFile</code>. 테스트 파일→<code>test</code>+<code>tested_by</code>, 그 외→<code>code_region</code>+<code>touches</code>. 키드 upsert로 재적용은 DB no-op.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">unidiff.PatchSet</span><span class="chip tech">SQLAlchemy</span><span class="chip tech">subprocess git</span><span class="chip tech">re(test 분류)</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">diff parsing</span><span class="chip concept">deterministic keyed upsert</span><span class="chip concept">latest-commit-wins</span><span class="chip concept">empty-tree/empty-commit degrade</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>Revision / ETag (폴링 단축)</h4><span class="path">graph/revision.py · db.py 리스너</span></div>
+          <p class="what">프로세스 내 프로젝트별 revision 카운터를 <code>after_commit</code> 이벤트로 bump. weak ETag <code>W/"{BOOT}.{pid}.{rev}"</code> → 유휴 1.5s 폴링에 <b>DB 읽기·직렬화 없이 304</b>. boot nonce로 재시작 시 클라 ETag 무효화.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">threading.Lock</span><span class="chip tech">SQLAlchemy event.listens_for</span><span class="chip tech">os.urandom</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">optimistic concurrency</span><span class="chip concept">conditional GET</span><span class="chip concept">GIL-atomic lockless read</span><span class="chip concept">boot-nonce 무효화</span></div>
+        </div>
+      </div>
+    </section>
+    <!-- BE:AI -->
+    <section id="be-ai">
+      <h2 class="sec">AI 트랜스포트 · RAG <span class="dom int">INTERNAL</span></h2>
+      <p class="sec-note">planner/executor/intent-router의 구체 엔진(Simulated / API / CLI)과, 결정·위키를 의미 검색해 프롬프트에 주입하는 RAG 메모리.</p>
+      <div class="cards">
+        <div class="card">
+          <div class="top"><h4>플래너 (ticket · project)</h4><span class="path">services/planner.py</span></div>
+          <p class="what">티켓 플래너(티켓→steps) + 프로젝트 플래너(목표→{slug,title,tickets}). 각각 Simulated / LangChain-API / CLI 변종. CLI는 <code>claude -p</code>로 Claude Code OAuth 재사용(키 불필요).</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">Protocol</span><span class="chip tech">LangChain(structured output)</span><span class="chip tech">subprocess(claude -p)</span><span class="chip tech">Pydantic 스키마</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">strategy pattern</span><span class="chip concept">deterministic simulation</span><span class="chip concept">structured-output vs JSON-scrape</span><span class="chip concept">planning-rules prepend</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>실행기 (Executor)</h4><span class="path">services/executor.py</span></div>
+          <p class="what">step 실행 — 결정적 write 콜백 또는 레포 편집 agentic CLI(<code>claude -p … --permission-mode acceptEdits</code> / <code>codex exec</code>). <code>ExecResult(summary, decision, ok, output)</code>.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">subprocess</span><span class="chip tech">dataclass</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">strategy pattern(brain=claude/codex)</span><span class="chip concept">headless pre-authorized edits</span><span class="chip concept">graceful failure(ok=False, no crash)</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>임베딩 (Embeddings)</h4><span class="path">services/embeddings.py</span></div>
+          <p class="what">플러그블 임베딩: 오프라인 결정적 기본 + 실 HuggingFace(<code>all-MiniLM-L6-v2</code>), 둘 다 384-dim(PGVector 컬럼 폭 고정). <code>ASV3_EMBEDDINGS=huggingface</code>로 전환.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">LangChain Embeddings</span><span class="chip tech">hashlib(hash-bag)</span><span class="chip tech">langchain_huggingface(lazy)</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">deterministic simulation(zero-dep)</span><span class="chip concept">env strategy select</span><span class="chip concept">unit-normalized vectors</span><span class="chip concept">CJK Unicode 토큰화(NaN 방지)</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>MemoryStore (RAG)</h4><span class="path">services/memory.py</span></div>
+          <p class="what">Decision/위키 <b>텍스트</b>(그래프/맵 아님)를 임베딩·검색해 planner/executor 프롬프트용 컨텍스트 패킷 반환. 테스트=InMemory, 프로덕션=PGVector(동일 인터페이스).</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">LangChain VectorStore</span><span class="chip tech">RecursiveCharacterTextSplitter</span><span class="chip tech">PGVector</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">RAG retrieval-augmented prompting</span><span class="chip concept">stable id upsert(중복 벡터 방지)</span><span class="chip concept">fail-safe(NaN→no hits)</span><span class="chip concept">interface abstraction</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>메모리 배선 · 프로모션</h4><span class="path">routers/memory.py · services/promotion.py</span></div>
+          <p class="what"><code>MEMORY</code>=프로세스 전역 lazy 싱글턴(첫 사용 시 모델 로드). 프로젝트 완료 시 <code>promote_project</code>가 각 Decision을 개인 <code>~/llm_wiki</code>로 증류·색인 → 후속 프로젝트가 재소환.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">pathlib(YAML front-matter)</span><span class="chip tech">SQLAlchemy</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">lazy singleton</span><span class="chip concept">env-gated backend</span><span class="chip concept">idempotent write</span><span class="chip concept">cross-project promotion pipeline</span></div>
+        </div>
+      </div>
+    </section>
+    <!-- BE:PERSIST -->
+    <section id="be-persist">
+      <h2 class="sec">영속성 · 공통 관심사 <span class="dom int">INTERNAL</span></h2>
+      <p class="sec-note">ORM 테이블, 연결 전략(StaticPool), LangGraph 체크포인터 선택, 서버 전역 환경 스위치.</p>
+      <div class="cards">
+        <div class="card">
+          <div class="top"><h4>ORM 테이블 (Node · Edge · Setting · Message)</h4><span class="path">models.py</span></div>
+          <p class="what"><b>Node</b>(범용 그래프 정점 — 거버넌스 오버라이드·활동·diff·좌표가 모두 <code>data</code> JSON에 탑승) · <b>Edge</b>(src/dst/kind) · <b>Setting</b>(key→JSON 전역 설정, project_id 없음→revision 무시) · <b>Message</b>(autoincrement id=폴링 커서, append-only).</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">SQLAlchemy 2.0(Mapped/JSON)</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">single-table graph</span><span class="chip concept">JSON side-channel</span><span class="chip concept">key→JSON config</span><span class="chip concept">append-only event log</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>엔진 · 세션 · 연결 전략</h4><span class="path">db.py</span></div>
+          <p class="what">기본 in-memory SQLite를 <code>StaticPool</code>+<code>check_same_thread=False</code>로 스레드 간 <b>단일 연결 공유</b>(요청 스레드+백그라운드 워커가 같은 DB). <code>get_session</code> 제너레이터 DI, <code>expire_on_commit=False</code>. 실배포는 Postgres.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">SQLAlchemy create_engine/StaticPool</span><span class="chip tech">sessionmaker</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">shared-connection(cross-thread)</span><span class="chip concept">generator DI dependency</span><span class="chip concept">commit-listener revision tracking</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>체크포인터 선택</h4><span class="path">db.py · make_checkpointer</span></div>
+          <p class="what"><code>ASV3_CHECKPOINTER</code>=memory/postgres/auto. Postgres는 장수 모듈-보유 연결(컨텍스트-매니저 GC-close 버그 회피), 어떤 실패든 <code>MemorySaver</code>로 graceful degrade — 없는 libpq/DB가 API를 죽이지 않음. thread id=<code>ticket:{tid}</code>.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">LangGraph MemorySaver/PostgresSaver</span><span class="chip tech">psycopg</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">process-wide singleton</span><span class="chip concept">durable vs ephemeral</span><span class="chip concept">graceful degradation</span></div>
+        </div>
+        <div class="card">
+          <div class="top"><h4>서버 전역 · 공통 관심사</h4><span class="path">main.py · 환경 스위치</span></div>
+          <p class="what">인증 없음(단일 사용자, CORS <code>*</code>) · <code>_CatchAllMiddleware</code> 500 변환 · 명시적 HTTPException. 스위치: <code>ASV3_AGENT_MODE·BRAIN·ASYNC_EXEC·THROTTLE·EMBEDDINGS·CHECKPOINTER·WORKSPACE_DIR</code>, <code>ANTHROPIC/OPENAI_API_KEY</code>, <code>DATABASE_URL</code>, <code>ASV3_LLM_WIKI_ROOT</code>.</p>
+          <div class="row"><span class="lbl">tech</span><span class="chip tech">Starlette middleware</span><span class="chip tech">CORS</span><span class="chip tech">env config</span></div>
+          <div class="row"><span class="lbl">concept</span><span class="chip concept">12-factor env config</span><span class="chip concept">catch-all error boundary</span><span class="chip concept">secret-presence-not-value</span></div>
+        </div>
+      </div>
+    </section>
+    <!-- CONCEPTS -->
+    <section id="concepts">
+      <h2 class="sec">부록 · 프로그래밍 개념 색인</h2>
+      <p class="sec-note">시스템 전반에 반복 등장하는 소프트웨어 개념을 묶어 어디에 쓰였는지 정리.</p>
+      <table class="stack">
+        <thead><tr><th>개념</th><th>어디에</th></tr></thead>
+        <tbody>
+          <tr><td>State machine · HITL interrupt/resume</td><td class="m">티켓 라이프사이클 LangGraph(계획/리뷰 게이트에서 <code>interrupt()</code> → <code>Command(resume=…)</code>)</td></tr>
+          <tr><td>Checkpointing</td><td class="m">LangGraph 체크포인터(memory/postgres) · autonomy를 state에 저장해 재현성 확보</td></tr>
+          <tr><td>Strategy pattern</td><td class="m">planner/executor/intent-router의 Simulated·API·CLI 변종 · embeddings 백엔드</td></tr>
+          <tr><td>Factory + Dependency inversion</td><td class="m">governance 엔진 팩토리 — 라우터는 구체 클래스를 import하지 않음</td></tr>
+          <tr><td>Resolution chain / precedence</td><td class="m">규칙(global+override) · 모델(project→global→env) · 자율도(ticket→project→global)</td></tr>
+          <tr><td>Deterministic simulation</td><td class="m"><code>ASV3_AGENT_MODE=simulated</code> — planner/executor/intent/embeddings 오프라인 결정적(테스트·데모)</td></tr>
+          <tr><td>Adapter / seam</td><td class="m">프론트 <code>ApiClient</code> ↔ MockApiClient/HttpApiClient 런타임 교체</td></tr>
+          <tr><td>Observer (subscribe/notify)</td><td class="m">라이브 동기화 — 쓰기 후 notify→reload, 수동 새로고침 없음</td></tr>
+          <tr><td>Optimistic concurrency / conditional GET</td><td class="m"><code>GET /graph</code> weak ETag + revision 카운터 → 유휴 폴링 304</td></tr>
+          <tr><td>Optimistic UI</td><td class="m">지도 드래그 위치 · 리뷰 승인 · 상태 pre-write(워커 전)</td></tr>
+          <tr><td>Cursor pagination</td><td class="m">채널 <code>?since={id}</code> 증분 폴링 + 클라 dedup</td></tr>
+          <tr><td>RAG (retrieval-augmented prompting)</td><td class="m">Decision/위키 임베딩 → step 프롬프트에 컨텍스트 패킷 주입 · cross-project promotion</td></tr>
+          <tr><td>Concurrency control</td><td class="m">per-project exec lock(실행만 직렬화) · commit-before-spawn · StaticPool 단일 연결</td></tr>
+          <tr><td>Idempotency</td><td class="m">프로젝트 create/merge · diff keyed upsert · 위키 프로모션 write</td></tr>
+          <tr><td>Graceful degradation / fail-safe</td><td class="m">checkpointer→MemorySaver · intent 에러→clarify · NaN 벡터→no hits · catch-all 500</td></tr>
+          <tr><td>Two-axis visual encoding</td><td class="m">node kind→모양/아이콘, status→색(tokens.css 단일 소스)이 전 UI 구동</td></tr>
+          <tr><td>Command dispatch table</td><td class="m">steer op 실행기(<code>_DISPATCH</code>) — NL→7 고정 op</td></tr>
+          <tr><td>Append-only event log</td><td class="m">대화 채널 Message 테이블(감사 추적)</td></tr>
+          <tr><td>12-factor env config</td><td class="m"><code>ASV3_*</code> 스위치로 모드/트랜스포트/DB/체크포인터 제어</td></tr>
+        </tbody>
+      </table>
+      <div class="callout" style="margin-top:22px">
+        <b>문서 범위:</b> 이 매뉴얼은 <code>cp0-governance</code> 브랜치(Living Cockpit v1, CP0–CP4)의 코드 인벤토리를 기준으로 3개 병렬 탐색 에이전트가
+        수집한 결과를 정리한 것이다. 엔드포인트/컴포넌트/서비스는 빠짐없이 나열을 목표로 했으며, 각 기능의 tech·concept은 실제 구현에서 확인된 항목이다.
+      </div>
+    </section>
+
+    <footer>Agent System v3 · Living Cockpit v1 (CP0–CP4) · 생성: 2026-07-01 · 브랜치 <code>cp0-governance</code></footer>
+  </main>
+</div>
+</body>
+</html>

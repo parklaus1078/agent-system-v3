@@ -1,5 +1,5 @@
 import { useStore } from '../../store/useStore';
-import { neighbors, ticketDisplayStatus, type Status } from '../../domain/graph';
+import { neighbors, orderedTickets, ticketDisplayStatus, type Status } from '../../domain/graph';
 import { LayersIcon, TargetIcon } from '../icons';
 
 const RAIL_STATUS_LABEL: Record<Status, string> = {
@@ -19,7 +19,7 @@ export function CockpitRail() {
   if (!graph) return null;
 
   const objective = graph.nodes.find((n) => n.kind === 'objective');
-  const tickets = graph.nodes.filter((n) => n.kind === 'ticket');
+  const tickets = orderedTickets(graph); // reprioritize-aware backlog order
 
   return (
     <div className="rail">

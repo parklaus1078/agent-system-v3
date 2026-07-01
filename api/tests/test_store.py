@@ -6,10 +6,17 @@ from app.graph.store import (
     approve_plan,
     neighbors,
 )
-from app.graph.diff_ingest import apply_step_diff
-from app.models import Node
+from app.graph.diff_ingest import apply_step_diff, _is_test_path
+from app.models import Node, Edge
 
 DIFF = "diff --git a/src/x.ts b/src/x.ts\n--- a/src/x.ts\n+++ b/src/x.ts\n@@ -0,0 +1 @@\n+x\n"
+
+# a diff touching a production file AND several test files (Tests-pane classification)
+MIXED_DIFF = (
+    "diff --git a/src/x.ts b/src/x.ts\n--- a/src/x.ts\n+++ b/src/x.ts\n@@ -0,0 +1 @@\n+x\n"
+    "diff --git a/tests/test_foo.py b/tests/test_foo.py\n--- /dev/null\n+++ b/tests/test_foo.py\n@@ -0,0 +1 @@\n+y\n"
+    "diff --git a/web/src/Shell.test.tsx b/web/src/Shell.test.tsx\n--- /dev/null\n+++ b/web/src/Shell.test.tsx\n@@ -0,0 +1 @@\n+z\n"
+)
 
 
 def _seed(db):
@@ -43,6 +50,38 @@ def test_apply_step_diff_is_idempotent(session):
     assert sum(n["kind"] == "code_region" for n in g["nodes"]) == 1  # no duplicate
     assert sum(e["kind"] == "touches" for e in g["edges"]) == 1
     assert r1 == r2
+
+
+def test_is_test_path_classification():
+    for p in ["tests/test_foo.py", "__tests__/x.ts", "test_x.py", "x_test.py", "a/b.test.tsx", "c.spec.ts"]:
+        assert _is_test_path(p), p
+    for p in ["contests/x.py", "detest_thing.py", "src/test_helpers/util.py", "src/app.ts", "generated/t1/step_1.ts"]:
+        assert not _is_test_path(p), p
+
+
+def test_apply_step_diff_classifies_test_files_as_test_nodes(session):
+    _seed(session)
+    apply_step_diff(session, "p1", "s1", "sha1", MIXED_DIFF)
+    g = get_graph(session, "p1")
+    nodes = {n["id"]: n for n in g["nodes"]}
+    # production file -> code_region; test files -> test nodes (and NOT code_region)
+    assert nodes["cr:src/x.ts"]["kind"] == "code_region"
+    assert nodes["test:tests/test_foo.py"]["kind"] == "test"
+    assert nodes["test:web/src/Shell.test.tsx"]["kind"] == "test"
+    assert "cr:tests/test_foo.py" not in nodes
+    # tested_by edges link the step to each test node
+    by_kind = [(e["from"], e["to"], e["kind"]) for e in g["edges"]]
+    assert ("s1", "test:tests/test_foo.py", "tested_by") in by_kind
+    assert ("s1", "test:web/src/Shell.test.tsx", "tested_by") in by_kind
+    assert ("s1", "cr:src/x.ts", "touches") in by_kind
+
+
+def test_apply_step_diff_test_classification_is_idempotent(session):
+    _seed(session)
+    r1 = apply_step_diff(session, "p1", "s1", "sha1", MIXED_DIFF)
+    r2 = apply_step_diff(session, "p1", "s1", "sha1", MIXED_DIFF)
+    assert r1 == r2
+    assert sum(1 for n in get_graph(session, "p1")["nodes"] if n["kind"] == "test") == 2
 
 
 def test_owning_path(session):

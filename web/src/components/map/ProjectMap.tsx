@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -12,6 +12,8 @@ import '@xyflow/react/dist/style.css';
 import { useStore } from '../../store/useStore';
 import {
   neighbors,
+  nodeActivity,
+  orderedTickets,
   ticketDisplayStatus,
   type ProjectGraph,
   type GraphNode,
@@ -30,6 +32,8 @@ const ROW_TICKET = 150;
 const ROW_DECISION = 290;
 const ROW_CODE = 384;
 const CODE_STEP = 44;
+const ROW_STEP = 250; // step nodes sit just below their ticket when the Step layer is on
+const STEP_GAP = 30;
 
 const EDGE_STYLE: Record<EdgeKind, React.CSSProperties> = {
   has: { stroke: '#c4cad4', strokeWidth: 1.5 },
@@ -81,9 +85,32 @@ export interface ProjectMapProps {
 
 function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
   const graph = useStore((s) => s.graph);
+  const api = useStore((s) => s.api);
   const selectTicket = useStore((s) => s.selectTicket);
   const editPlan = useStore((s) => s.editPlan);
+  const setChannelFilter = useStore((s) => s.setChannelFilter);
   const [showCode, setShowCode] = useState(false);
+  const [showSteps, setShowSteps] = useState(false);
+  // Positions of nodes the user has dragged this session. They override the auto-layout
+  // immediately (no snap-back) while the save round-trips; the server then echoes them as
+  // data.pos on the next /graph poll so they survive reload / another machine.
+  const [localPos, setLocalPos] = useState<Record<string, { x: number; y: number }>>({});
+  const pending = useRef<Record<string, { x: number; y: number }>>({});
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flushSave = () => {
+    const batch = pending.current;
+    pending.current = {};
+    if (Object.keys(batch).length) void api.saveLayout(batch);
+  };
+  // flush any pending drag on unmount (e.g. navigating away right after dropping)
+  useEffect(() => () => flushSave(), []); // eslint-disable-line react-hooks/exhaustive-deps
+  const onNodeDragStop = (_: unknown, node: Node) => {
+    const p = { x: node.position.x, y: node.position.y };
+    setLocalPos((m) => ({ ...m, [node.id]: p }));
+    pending.current[node.id] = p;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(flushSave, 500); // debounce a burst of drags into one POST
+  };
 
   const active = !!highlightIds && highlightIds.length > 0;
   const dim = (id: string) => (active ? !highlightIds!.includes(id) : false);
@@ -96,14 +123,21 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
       return n?.kind === 'code_region' || n?.kind === 'test';
     });
   const effectiveShowCode = showCode || codeHighlighted;
+  // ...and the same for the Step layer: a trace onto a step (e.g. a review/blocked ref chip in
+  // the channel refs a step id) auto-reveals the Step layer so the highlighted step renders —
+  // otherwise the whole map would dim with no visible target (the step isn't drawn when hidden).
+  const stepHighlighted =
+    active && !!graph && highlightIds!.some((id) => graph.nodes.find((n) => n.id === id)?.kind === 'step');
+  const effectiveShowSteps = showSteps || stepHighlighted;
 
   const { nodes, edges, banner } = useMemo(() => {
     if (!graph) return { nodes: [] as Node[], edges: [] as Edge[], banner: null as string | null };
 
     const objective = graph.nodes.find((n) => n.kind === 'objective');
-    const tickets = graph.nodes.filter((n) => n.kind === 'ticket');
+    const tickets = orderedTickets(graph); // reprioritize-aware left→right order
     const decisions = graph.nodes.filter((n) => n.kind === 'decision');
     const codes = graph.nodes.filter((n) => n.kind === 'code_region' || n.kind === 'test');
+    const stepNodes = effectiveShowSteps ? graph.nodes.filter((n) => n.kind === 'step') : [];
 
     // layered positions
     const pos = new Map<string, { x: number; y: number }>();
@@ -114,26 +148,60 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
     tickets.forEach((t, i) => pos.set(t.id, { x: startX + i * col, y: ROW_TICKET }));
     if (objective) pos.set(objective.id, { x: -OBJ_W / 2, y: 0 });
 
+    // Drag overrides: a session-local drop, else the persisted data.pos. Applied to
+    // tickets/objective NOW so their children (laid out relative to centerOf below) follow
+    // a moved ticket; re-applied to every node after, so dragged children win too.
+    const override = (n: GraphNode): { x: number; y: number } | undefined => {
+      const p = (localPos[n.id] ?? (n.data?.pos as { x: number; y: number } | undefined)) || undefined;
+      return p && Number.isFinite(p.x) && Number.isFinite(p.y) ? { x: p.x, y: p.y } : undefined;
+    };
+    const applyOverrides = (ns: GraphNode[]) =>
+      ns.forEach((n) => {
+        const p = override(n);
+        if (p) pos.set(n.id, p);
+      });
+    applyOverrides([objective, ...tickets].filter(Boolean) as GraphNode[]);
+
+    // steps stacked under their owning ticket (Step layer); the rows below shift down by
+    // the tallest ticket's step block so nothing overlaps.
+    const stepsByOwner = new Map<string, GraphNode[]>();
+    for (const s of stepNodes) {
+      const owner = ownerTicketId(graph, s.id);
+      if (!owner) continue;
+      (stepsByOwner.get(owner) ?? stepsByOwner.set(owner, []).get(owner)!).push(s);
+    }
+    const maxSteps = [...stepsByOwner.values()].reduce((m, a) => Math.max(m, a.length), 0);
+    const stepBlockH = effectiveShowSteps ? maxSteps * STEP_GAP + 16 : 0;
+    stepsByOwner.forEach((arr, owner) =>
+      arr.forEach((s, i) =>
+        pos.set(s.id, { x: centerOf(owner) - TICKET_W / 2, y: ROW_STEP + i * STEP_GAP }),
+      ),
+    );
+
     const ticketHasDecision = new Set(
       decisions.map((d) => ownerTicketId(graph, d.id)).filter(Boolean) as string[],
     );
     decisions.forEach((d) => {
       const owner = ownerTicketId(graph, d.id);
-      pos.set(d.id, { x: (owner ? centerOf(owner) : 0) - 118, y: ROW_DECISION });
+      pos.set(d.id, { x: (owner ? centerOf(owner) : 0) - 118, y: ROW_DECISION + stepBlockH });
     });
     // code/test stacked below their owner ticket (only matters when showCode)
     const codeIdxByOwner = new Map<string, number>();
     codes.forEach((c) => {
       const owner = ownerTicketId(graph, c.id);
-      const baseY = owner && ticketHasDecision.has(owner) ? ROW_CODE : ROW_DECISION;
+      const baseY = (owner && ticketHasDecision.has(owner) ? ROW_CODE : ROW_DECISION) + stepBlockH;
       const idx = codeIdxByOwner.get(owner ?? '') ?? 0;
       codeIdxByOwner.set(owner ?? '', idx + 1);
       pos.set(c.id, { x: (owner ? centerOf(owner) : 0) - CODE_W / 2, y: baseY + idx * CODE_STEP });
     });
 
+    // node-level drag overrides win over the auto-layout for every node (e.g. a dragged step)
+    applyOverrides(graph.nodes);
+
     const visible = new Set<string>();
     if (objective) visible.add(objective.id);
     tickets.forEach((t) => visible.add(t.id));
+    stepNodes.forEach((s) => { if (pos.has(s.id)) visible.add(s.id); });
     decisions.forEach((d) => visible.add(d.id));
     if (effectiveShowCode) codes.forEach((c) => visible.add(c.id));
 
@@ -143,8 +211,12 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
         id: objective.id,
         type: 'objective',
         position: pos.get(objective.id)!,
-        data: { label: objective.label, live: true },
-        draggable: false,
+        data: {
+          label: objective.label,
+          description: (objective.data?.description as string | undefined) ?? undefined,
+          live: true,
+        },
+        draggable: true,
         selectable: false,
       });
     tickets.forEach((t) => {
@@ -160,10 +232,29 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
           done: meta.done,
           total: meta.total,
           hint: meta.hint,
+          activity: nodeActivity(t),
           dimmed: dim(t.id),
         },
-        draggable: false,
+        draggable: true,
         selectable: true, // tickets receive pointer events (others stay inert)
+      });
+    });
+    stepNodes.forEach((s) => {
+      if (!pos.has(s.id)) return;
+      const owner = ownerTicketId(graph, s.id);
+      const idx = owner ? (stepsByOwner.get(owner) ?? []).findIndex((x) => x.id === s.id) : 0;
+      rfNodes.push({
+        id: s.id,
+        type: 'step',
+        position: pos.get(s.id)!,
+        data: {
+          label: s.label,
+          status: (s.status ?? 'planning') as Status,
+          index: idx + 1,
+          dimmed: dim(s.id),
+        },
+        draggable: true,
+        selectable: false,
       });
     });
     decisions.forEach((d) =>
@@ -172,7 +263,7 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
         type: 'decision',
         position: pos.get(d.id)!,
         data: { label: d.label, dimmed: dim(d.id) },
-        draggable: false,
+        draggable: true,
         selectable: false,
       }),
     );
@@ -183,7 +274,7 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
           type: c.kind === 'test' ? 'test' : 'code_region',
           position: pos.get(c.id)!,
           data: { label: c.label, dimmed: dim(c.id) },
-          draggable: false,
+          draggable: true,
           selectable: false,
         }),
       );
@@ -203,7 +294,10 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
     const rep = (id: string): string | null => {
       const node = graph.nodes.find((n) => n.id === id);
       if (!node) return null;
-      return node.kind === 'step' ? ownerTicketId(graph, id) : id;
+      // keep step nodes as-is when the Step layer renders them (so ticket→step and
+      // step→code edges keep real attribution); otherwise collapse them onto the ticket.
+      if (node.kind === 'step') return effectiveShowSteps && pos.has(id) ? id : ownerTicketId(graph, id);
+      return id;
     };
     const rfEdges: Edge[] = [];
     const seen = new Set<string>();
@@ -237,7 +331,7 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
     }
 
     return { nodes: rfNodes, edges: rfEdges, banner: bannerTag };
-  }, [graph, effectiveShowCode, highlightIds]);
+  }, [graph, effectiveShowCode, effectiveShowSteps, highlightIds, localPos]);
 
   return (
     <ReactFlow
@@ -248,9 +342,11 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
       fitViewOptions={{ padding: 0.26, maxZoom: 0.9 }}
       minZoom={0.4}
       maxZoom={1.5}
-      nodesDraggable={false}
+      nodesDraggable
       nodesConnectable={false}
+      onNodeDragStop={onNodeDragStop}
       onNodeClick={(_, node) => {
+        setChannelFilter(node.id); // CP4: filter the channel to this node's thread (any node)
         if (node.type !== 'ticket' || !graph) return;
         // a planning ticket opens its plan editor; others open the cockpit
         if (ticketDisplayStatus(graph, node.id) === 'planning') editPlan(node.id);
@@ -263,6 +359,14 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
       <Background variant={BackgroundVariant.Dots} gap={23} size={1.6} color="#ccd3dd" />
       <Panel position="top-left">
         <div className="map-controls">
+          <button
+            className="map-toggle"
+            aria-pressed={effectiveShowSteps}
+            onClick={() => setShowSteps((v) => !v)}
+          >
+            <LayersIcon size={15} />
+            Step 레이어
+          </button>
           <button
             className="map-toggle"
             aria-pressed={effectiveShowCode}

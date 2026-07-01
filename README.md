@@ -227,7 +227,7 @@ docker compose up --build      # → http://localhost:8080 (web), http://localho
 | `DATABASE_URL` | `sqlite+pysqlite:///:memory:` | SQLAlchemy URL. 데모는 `sqlite+pysqlite:///./dev.db` 권장(영속). `postgresql+psycopg://…`면 Postgres |
 | `ASV3_AGENT_MODE` | `simulated` | `simulated`(stub, 쿼터 0) 또는 `real`(`claude -p`) |
 | `ASV3_WORKSPACE_DIR` | `<api>/.asv3-workspace` | **프로젝트별** 대상 레포의 루트. 각 프로젝트는 `{루트}/{project_id}`에서 작업·commit(자동 생성·git init) |
-| `ASV3_TARGET_REPO_DIR` | (미설정) | (legacy) 모든 프로젝트가 공유하는 단일 레포. 설정 시 워크스페이스보다 우선. 프로젝트별 오버라이드는 Objective `data.repo_dir`(최우선) |
+| `ASV3_TARGET_REPO_DIR` | (미설정) | `ASV3_WORKSPACE_DIR`의 deprecated 별칭(이것도 프로젝트별 루트 `{path}/{project_id}`). **`ASV3_WORKSPACE_DIR` 미설정 시에만** 사용. 프로젝트별 오버라이드는 Objective `data.repo_dir`(최우선) |
 | `ASV3_LLM_WIKI_ROOT` | (미설정) | 프로젝트 완료 시 Decision을 승격할 위키 루트. **미설정이면 승격 skip**(실제 디스크 안 건드림) |
 | `ASV3_EMBEDDINGS` | (미설정) | `huggingface`면 실제 임베딩 모델, 아니면 결정적 offline 임베딩 |
 | `ASV3_CHECKPOINTER` | `auto` | LangGraph 체크포인터: `memory` / `postgres` / `auto`(Postgres URL이면 postgres) |

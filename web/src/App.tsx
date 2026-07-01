@@ -1,14 +1,19 @@
-import { useState } from 'react';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import { Shell } from './components/Shell';
 import { ProjectsHome } from './components/home/ProjectsHome';
+import { RulesPage } from './components/governance/RulesPage';
+import { ModelsPage } from './components/governance/ModelsPage';
 
+/** Path-routed: "/" = projects landing (home), "/project/:pid" = that project's map/cockpit,
+ *  "/project/:pid/{rules,models}" = the CP0 governance (Rules / Models) pages. */
 export default function App() {
-  // Boots into the project (Navigator), as the wireframe does; the Control Tower
-  // brand opens the project-management home, and a project card re-enters it.
-  const [view, setView] = useState<'home' | 'project'>('project');
-  return view === 'home' ? (
-    <ProjectsHome onOpenProject={() => setView('project')} />
-  ) : (
-    <Shell onHome={() => setView('home')} />
+  return (
+    <Routes>
+      <Route path="/" element={<ProjectsHome />} />
+      <Route path="/project/:pid" element={<Shell />} />
+      <Route path="/project/:pid/rules" element={<RulesPage />} />
+      <Route path="/project/:pid/models" element={<ModelsPage />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }

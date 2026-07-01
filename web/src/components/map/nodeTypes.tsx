@@ -1,6 +1,7 @@
 import { Handle, Position, type NodeProps } from '@xyflow/react';
-import type { Status } from '../../domain/graph';
+import type { NodeActivity, Status } from '../../domain/graph';
 import { TargetIcon, DiamondIcon, CodeIcon, FlaskIcon, ChevronRightIcon } from '../icons';
+import { ActivityBadge } from '../ActivityBadge';
 
 // status -> short pill label (matches the wireframe's English status words)
 const STATUS_LABEL: Record<Status, string> = {
@@ -32,6 +33,7 @@ function Handles({ target = true, source = true }: { target?: boolean; source?: 
 
 export interface ObjectiveData {
   label: string;
+  description?: string;
   live?: boolean;
   [k: string]: unknown;
 }
@@ -53,6 +55,7 @@ export function ObjectiveNode({ data }: NodeProps) {
         )}
       </div>
       <div className="rf-objective__label">{d.label}</div>
+      {d.description && <div className="rf-objective__desc">{d.description}</div>}
     </div>
   );
 }
@@ -64,6 +67,7 @@ export interface TicketData {
   done: number;
   total: number;
   hint?: { text: string; tone: Status } | null;
+  activity?: NodeActivity;
   dimmed?: boolean;
   [k: string]: unknown;
 }
@@ -77,7 +81,10 @@ export function TicketNode({ data }: NodeProps) {
       <Handles />
       <div className="rf-ticket__head">
         <span className="kindtag">{d.tag}</span>
-        <StatusPill status={d.status} />
+        <span className="rf-ticket__status">
+          <ActivityBadge activity={d.activity} compact />
+          <StatusPill status={d.status} />
+        </span>
       </div>
       <div className="rf-ticket__label">{d.label}</div>
       <div className="rf-ticket__bar" aria-hidden="true">
@@ -144,6 +151,25 @@ export function TestNode({ data }: NodeProps) {
   );
 }
 
+export interface StepData {
+  label: string;
+  status: Status;
+  index: number; // 1-based position within the ticket
+  dimmed?: boolean;
+  [k: string]: unknown;
+}
+export function StepNode({ data }: NodeProps) {
+  const d = data as StepData;
+  return (
+    <div className={`rf-step${d.dimmed ? ' is-dimmed' : ''}`} title={STATUS_LABEL[d.status]}>
+      <Handles />
+      <span className={`rf-step__dot rf-fill--${d.status}`} />
+      <span className="rf-step__num mono">{String(d.index).padStart(2, '0')}</span>
+      <span className="rf-step__label">{d.label}</span>
+    </div>
+  );
+}
+
 // Invisible node used to extend the layout's bounding box so fitView top-anchors
 // the real content instead of vertically centering it.
 function SpacerNode() {
@@ -153,6 +179,7 @@ function SpacerNode() {
 export const nodeTypes = {
   objective: ObjectiveNode,
   ticket: TicketNode,
+  step: StepNode,
   decision: DecisionNode,
   code_region: CodeRegionNode,
   test: TestNode,

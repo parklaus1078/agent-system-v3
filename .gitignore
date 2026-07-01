@@ -25,3 +25,5 @@ dist/
 # Python build/venv
 *.egg-info/
 .pytest_cache/
+# Python build artifacts
+build/

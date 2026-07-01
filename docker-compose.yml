@@ -30,7 +30,7 @@ services:
       ASV3_AGENT_MODE: ${ASV3_AGENT_MODE:-simulated}
       # In-process lifecycle checkpointer (robust). Set to "postgres" to persist across restarts.
       ASV3_CHECKPOINTER: ${ASV3_CHECKPOINTER:-memory}
-      ASV3_TARGET_REPO_DIR: /data/target-repo
+      ASV3_WORKSPACE_DIR: /data/workspace  # per-project repos: /data/workspace/{project_id}
       # Optional: ASV3_EMBEDDINGS=huggingface to use real embeddings + pgvector (heavier image).
       ASV3_EMBEDDINGS: ${ASV3_EMBEDDINGS:-}
     volumes:

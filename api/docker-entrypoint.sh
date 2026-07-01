@@ -39,17 +39,11 @@ else:
     print("[entrypoint] project p1 already present; skipping seed")
 PY
 
-REPO="${ASV3_TARGET_REPO_DIR:-/data/target-repo}"
-mkdir -p "$REPO"
-if [ ! -d "$REPO/.git" ]; then
-  echo "[entrypoint] initializing target repo at $REPO"
-  git -C "$REPO" init -q
-  git -C "$REPO" config user.email demo@control-tower.local
-  git -C "$REPO" config user.name "Control Tower"
-  printf '# Control Tower target repo\n' > "$REPO/README.md"
-  git -C "$REPO" add -A
-  git -C "$REPO" commit -q -m "init"
-fi
+# Workspace ROOT only — the app creates + git-inits each project's repo at
+# {workspace}/{project_id} on first run (lifecycle._ensure_git_repo), so we just ensure
+# the root exists (no single shared repo).
+WS="${ASV3_WORKSPACE_DIR:-/data/workspace}"
+mkdir -p "$WS"
 
 echo "[entrypoint] starting: $*"
 exec "$@"

@@ -8,7 +8,7 @@
 #        DATABASE_URL=postgresql+psycopg://ct:ct@localhost:5432/controltower
 #        ASV3_AGENT_MODE=real
 #        ASV3_CHECKPOINTER=postgres
-#        ASV3_TARGET_REPO_DIR=/path/to/your/target-repo
+#        ASV3_WORKSPACE_DIR=/home/you/asv3-projects   # per-project repos under here
 #      then run the api on the HOST:
 #        cd api && .venv/bin/python -m uvicorn app.main:app --port 8099
 #   3) open http://localhost:8080
