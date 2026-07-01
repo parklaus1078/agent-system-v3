@@ -1,17 +1,25 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session
 
+from .. import db as appdb  # for the BOOT nonce (referenced at call time so tests can patch it)
 from ..db import get_session
-from ..graph import store
+from ..graph import revision, store
 from ..schemas import GraphOut, LayoutIn, LayoutOut, StepDetailOut
 
 router = APIRouter(prefix="/projects/{pid}", tags=["graph"])
 
 
 @router.get("/graph", response_model=GraphOut)
-def get_graph(pid: str, db: Session = Depends(get_session)):
+def get_graph(pid: str, request: Request, response: Response, db: Session = Depends(get_session)):
+    # Conditional GET: the project's revision counter (bumped on any node/edge commit) is a
+    # weak ETag. An idle poll sends If-None-Match and we answer 304 here — no DB read, no
+    # serialization — instead of re-scanning + re-serializing the whole graph every 1.5s.
+    etag = f'W/"{appdb.BOOT}.{pid}.{revision.get(pid)}"'
+    if request.headers.get("if-none-match") == etag:
+        return Response(status_code=304)  # Response instance bypasses response_model
+    response.headers["ETag"] = etag
     g = store.get_graph(db, pid)
     return {
         "nodes": g["nodes"],

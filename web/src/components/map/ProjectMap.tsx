@@ -13,6 +13,7 @@ import { useStore } from '../../store/useStore';
 import {
   neighbors,
   nodeActivity,
+  orderedTickets,
   ticketDisplayStatus,
   type ProjectGraph,
   type GraphNode,
@@ -87,6 +88,7 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
   const api = useStore((s) => s.api);
   const selectTicket = useStore((s) => s.selectTicket);
   const editPlan = useStore((s) => s.editPlan);
+  const setChannelFilter = useStore((s) => s.setChannelFilter);
   const [showCode, setShowCode] = useState(false);
   const [showSteps, setShowSteps] = useState(false);
   // Positions of nodes the user has dragged this session. They override the auto-layout
@@ -121,15 +123,21 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
       return n?.kind === 'code_region' || n?.kind === 'test';
     });
   const effectiveShowCode = showCode || codeHighlighted;
+  // ...and the same for the Step layer: a trace onto a step (e.g. a review/blocked ref chip in
+  // the channel refs a step id) auto-reveals the Step layer so the highlighted step renders —
+  // otherwise the whole map would dim with no visible target (the step isn't drawn when hidden).
+  const stepHighlighted =
+    active && !!graph && highlightIds!.some((id) => graph.nodes.find((n) => n.id === id)?.kind === 'step');
+  const effectiveShowSteps = showSteps || stepHighlighted;
 
   const { nodes, edges, banner } = useMemo(() => {
     if (!graph) return { nodes: [] as Node[], edges: [] as Edge[], banner: null as string | null };
 
     const objective = graph.nodes.find((n) => n.kind === 'objective');
-    const tickets = graph.nodes.filter((n) => n.kind === 'ticket');
+    const tickets = orderedTickets(graph); // reprioritize-aware left→right order
     const decisions = graph.nodes.filter((n) => n.kind === 'decision');
     const codes = graph.nodes.filter((n) => n.kind === 'code_region' || n.kind === 'test');
-    const stepNodes = showSteps ? graph.nodes.filter((n) => n.kind === 'step') : [];
+    const stepNodes = effectiveShowSteps ? graph.nodes.filter((n) => n.kind === 'step') : [];
 
     // layered positions
     const pos = new Map<string, { x: number; y: number }>();
@@ -163,7 +171,7 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
       (stepsByOwner.get(owner) ?? stepsByOwner.set(owner, []).get(owner)!).push(s);
     }
     const maxSteps = [...stepsByOwner.values()].reduce((m, a) => Math.max(m, a.length), 0);
-    const stepBlockH = showSteps ? maxSteps * STEP_GAP + 16 : 0;
+    const stepBlockH = effectiveShowSteps ? maxSteps * STEP_GAP + 16 : 0;
     stepsByOwner.forEach((arr, owner) =>
       arr.forEach((s, i) =>
         pos.set(s.id, { x: centerOf(owner) - TICKET_W / 2, y: ROW_STEP + i * STEP_GAP }),
@@ -203,7 +211,11 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
         id: objective.id,
         type: 'objective',
         position: pos.get(objective.id)!,
-        data: { label: objective.label, live: true },
+        data: {
+          label: objective.label,
+          description: (objective.data?.description as string | undefined) ?? undefined,
+          live: true,
+        },
         draggable: true,
         selectable: false,
       });
@@ -284,7 +296,7 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
       if (!node) return null;
       // keep step nodes as-is when the Step layer renders them (so ticket→step and
       // step→code edges keep real attribution); otherwise collapse them onto the ticket.
-      if (node.kind === 'step') return showSteps && pos.has(id) ? id : ownerTicketId(graph, id);
+      if (node.kind === 'step') return effectiveShowSteps && pos.has(id) ? id : ownerTicketId(graph, id);
       return id;
     };
     const rfEdges: Edge[] = [];
@@ -319,7 +331,7 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
     }
 
     return { nodes: rfNodes, edges: rfEdges, banner: bannerTag };
-  }, [graph, effectiveShowCode, showSteps, highlightIds, localPos]);
+  }, [graph, effectiveShowCode, effectiveShowSteps, highlightIds, localPos]);
 
   return (
     <ReactFlow
@@ -334,6 +346,7 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
       nodesConnectable={false}
       onNodeDragStop={onNodeDragStop}
       onNodeClick={(_, node) => {
+        setChannelFilter(node.id); // CP4: filter the channel to this node's thread (any node)
         if (node.type !== 'ticket' || !graph) return;
         // a planning ticket opens its plan editor; others open the cockpit
         if (ticketDisplayStatus(graph, node.id) === 'planning') editPlan(node.id);
@@ -348,7 +361,7 @@ function MapInner({ highlightIds, onNewGoal }: ProjectMapProps) {
         <div className="map-controls">
           <button
             className="map-toggle"
-            aria-pressed={showSteps}
+            aria-pressed={effectiveShowSteps}
             onClick={() => setShowSteps((v) => !v)}
           >
             <LayersIcon size={15} />

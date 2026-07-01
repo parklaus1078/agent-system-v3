@@ -72,6 +72,21 @@
   border: 1px solid transparent;
 }
 .topbar__project:hover { background: var(--surface-3); }
+.topbar__editmeta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--r-sm);
+  color: var(--faint);
+  background: transparent;
+  border: 1px solid transparent;
+}
+.topbar__editmeta:hover {
+  background: var(--surface-3);
+  color: var(--ink-2);
+}
 
 .topbar__center {
   flex: 1;
@@ -117,6 +132,16 @@
   align-items: center;
   gap: 12px;
   flex: none;
+}
+.topbar__autonomy {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.topbar__autonomy-cap {
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.02em;
 }
 .legend-anchor {
   position: relative; /* anchors the Legend popover under the button */
@@ -199,6 +224,20 @@
   color: var(--ink);
   box-shadow: var(--shadow-xs);
 }
+.segmented--sm .segmented__btn {
+  padding: 3px 8px;
+  font-size: 11px;
+}
+.ticket-dial {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+.ticket-dial__cap {
+  font-size: 10px;
+  color: var(--muted);
+}
 
 .iconbtn {
   display: inline-flex;
@@ -217,9 +256,27 @@
 .iconbtn:hover { border-color: var(--border-strong); color: var(--ink); }
 
 /* ---- main area ---- */
+.shell__body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
 .shell__main {
   flex: 1;
+  min-width: 0;
   min-height: 0;
   position: relative;
   overflow: hidden;
+}
+.iconbtn__badge {
+  margin-left: 5px;
+  font-size: 10px;
+  min-width: 15px;
+  padding: 0 4px;
+  height: 15px;
+  line-height: 15px;
+  text-align: center;
+  border-radius: 8px;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
 }

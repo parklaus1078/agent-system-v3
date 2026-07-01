@@ -9,8 +9,12 @@ import { BugTrace } from './bugtrace/BugTrace';
 import { Modal } from './Modal';
 import { GoalEntry } from './goal/GoalEntry';
 import { PlanApproval } from './plan/PlanApproval';
+import { ProjectMetaEditor } from './home/ProjectMetaEditor';
 import { Legend } from './legend/Legend';
-import { GridIcon } from './icons';
+import { AutonomyDial } from './AutonomyDial';
+import { ChannelPanel } from './channel/ChannelPanel';
+import { GridIcon, EditIcon, LayersIcon } from './icons';
+import { nextTicketId } from '../domain/graph';
 import './Shell.css';
 
 /** Elapsed session clock shown as HH:MM:SS in the top bar (the "live" feel). */
@@ -43,13 +47,27 @@ export function Shell() {
   const error = useStore((s) => s.error);
   const setError = useStore((s) => s.setError);
   const clock = useElapsedClock();
-  const [highlightIds, setHighlightIds] = useState<string[] | null>(null);
+  const highlightIds = useStore((s) => s.highlightIds); // CP4: shared (BugTrace + channel refs)
+  const setHighlightIds = useStore((s) => s.setHighlightIds);
   const [goalFlow, setGoalFlow] = useState<'none' | 'goal' | 'plan'>('none');
   const [pendingGoal, setPendingGoal] = useState('');
   // Stable ticket id minted ONCE per goal so re-opening the plan modal reuses the same
   // /plan thread instead of creating duplicate tickets.
   const [pendingTid, setPendingTid] = useState('');
   const [legendOpen, setLegendOpen] = useState(false);
+  const [metaOpen, setMetaOpen] = useState(false); // project title/description view+edit
+  // CP2 conversation channel (right rail). Lives in the store so a CP4 map-node click can open
+  // it alongside the filter it sets (otherwise the filter would be invisible + unclearable).
+  const channelOpen = useStore((s) => s.channelOpen);
+  const setChannelOpen = useStore((s) => s.setChannelOpen);
+  const messageCount = useStore((s) => s.messages.length);
+  const [seenMessages, setSeenMessages] = useState(0);
+  // The badge is a genuine UNREAD count: while the panel is open everything is seen, so it
+  // stays 0; while closed it counts messages that arrived since it was last viewed.
+  useEffect(() => {
+    if (channelOpen) setSeenMessages(messageCount);
+  }, [channelOpen, messageCount]);
+  const unreadMessages = channelOpen ? 0 : Math.max(0, messageCount - seenMessages);
 
   // The route's :pid selects the project; setPid loads its graph (and is a no-op if
   // already current).
@@ -106,6 +124,14 @@ export function Shell() {
               <button className="topbar__project" onClick={goMap}>
                 {projectName}
               </button>
+              <button
+                className="topbar__editmeta"
+                aria-label="프로젝트 설명 보기·수정"
+                title="프로젝트 설명 보기·수정"
+                onClick={() => setMetaOpen(true)}
+              >
+                <EditIcon size={14} />
+              </button>
             </>
           )}
         </div>
@@ -115,6 +141,10 @@ export function Shell() {
         </div>
 
         <div className="topbar__right">
+          <span className="topbar__autonomy">
+            <span className="topbar__autonomy-cap mono">자율도</span>
+            <AutonomyDial />
+          </span>
           <span className={`live${online ? '' : ' live--off'}`} title={online ? '백엔드 연결됨' : '백엔드 연결 끊김'}>
             <span className="live__dot" aria-hidden="true" />
             <span className="mono">{online ? 'live' : 'offline'}</span>
@@ -136,6 +166,25 @@ export function Shell() {
               Cockpit
             </button>
           </div>
+          <button
+            className="iconbtn"
+            aria-label="거버넌스 — 규칙·모델 라우팅"
+            title="거버넌스 (규칙·모델)"
+            onClick={() => pid && navigate(`/project/${pid}/rules`)}
+          >
+            <LayersIcon size={15} />
+            Governance
+          </button>
+          <button
+            className="iconbtn"
+            aria-pressed={channelOpen}
+            aria-label="대화 채널 열기·닫기"
+            title="대화 채널"
+            onClick={() => setChannelOpen(!channelOpen)}
+          >
+            채널
+            {unreadMessages > 0 && <span className="iconbtn__badge mono">{unreadMessages}</span>}
+          </button>
           <div className="legend-anchor">
             <button
               className="iconbtn"
@@ -150,6 +199,7 @@ export function Shell() {
         </div>
       </header>
 
+      <div className="shell__body">
       <main className="shell__main">
         {view === 'map' ? (
           <ProjectMap
@@ -172,7 +222,9 @@ export function Shell() {
               onCancel={() => setGoalFlow('none')}
               onSubmit={(goal) => {
                 setPendingGoal(goal);
-                setPendingTid(`t-${Date.now().toString(36)}`); // mint once for this goal
+                // mint once for this goal as {slug}-{number(auto-increment)} — same shape the
+                // backend assigns, so UI-created tickets don't get an opaque t-{timestamp} id.
+                setPendingTid(graph ? nextTicketId(graph, pid ?? 'p1') : `${pid ?? 'p1'}-1`);
                 setGoalFlow('plan');
               }}
             />
@@ -196,6 +248,15 @@ export function Shell() {
             <PlanApproval ticketId={planTicketId} onCancel={closePlan} onApproved={closePlan} />
           </Modal>
         )}
+        {metaOpen && objective && (
+          <Modal onClose={() => setMetaOpen(false)}>
+            <ProjectMetaEditor
+              initialTitle={objective.label ?? ''}
+              initialDescription={(objective.data?.description as string | undefined) ?? ''}
+              onClose={() => setMetaOpen(false)}
+            />
+          </Modal>
+        )}
         {error && (
           <div className="toast" role="alert">
             <span>{error}</span>
@@ -205,6 +266,8 @@ export function Shell() {
           </div>
         )}
       </main>
+        {channelOpen && <ChannelPanel />}
+      </div>
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { neighbors, type ProjectGraph } from '../domain/graph';
 import type { ApiClient } from '../api/ApiClient';
+import type { AutonomyLevel, ChannelMessage } from '../api/dto';
 import { MockApiClient } from '../api/mock/MockApiClient';
 import { HttpApiClient } from '../api/http/HttpApiClient';
 
@@ -21,12 +22,24 @@ interface State {
   selectedStepId: string | null;
   reviewOpen: boolean; // full-screen review gate overlay
   planTicketId: string | null; // ticket whose plan is being edited (planning tickets)
+  autonomy: AutonomyLevel; // CP1 throttle: effective level for the current project
+  messages: ChannelMessage[]; // CP2 channel (accumulated via the since cursor)
+  highlightIds: string[] | null; // CP4: map nodes to highlight (BugTrace / channel ref chips)
+  channelFilter: string | null; // CP4: when set, the channel shows only messages ref-ing this node
+  channelOpen: boolean; // CP2 channel right-rail visibility (setting a filter forces it open)
   load: () => Promise<void>;
+  loadAutonomy: () => Promise<void>;
+  loadMessages: () => Promise<void>;
+  setAutonomy: (level: AutonomyLevel) => Promise<void>;
   setPid: (pid: string) => void; // switch project (route-driven)
   setError: (msg: string | null) => void;
   setMode: (mode: Mode) => void;
   selectTicket: (id: string | null) => void;
   selectStep: (id: string | null) => void;
+  setHighlightIds: (ids: string[] | null) => void;
+  setChannelFilter: (nodeId: string | null) => void;
+  setChannelOpen: (open: boolean) => void;
+  focusNode: (nodeId: string) => void; // channel ref chip -> highlight the node on the map
   openInCockpit: (stepId: string) => void; // jump from the board into the step's review
   openReview: () => void;
   closeReview: () => void;
@@ -55,6 +68,8 @@ export const useStore = create<State>()(
       // reflects the new state without a manual refresh control.
       api.subscribe(() => {
         void get().load();
+        void get().loadMessages();
+        void get().loadAutonomy(); // a steer `control` op can change the throttle server-side
       });
       return {
         api,
@@ -67,6 +82,54 @@ export const useStore = create<State>()(
         selectedStepId: null,
         reviewOpen: false,
         planTicketId: null,
+        autonomy: 'per-step',
+        messages: [],
+        highlightIds: null,
+        channelFilter: null,
+        channelOpen: true,
+        setHighlightIds: (highlightIds) => set({ highlightIds }),
+        // Setting a filter (a map node click) forces the channel open, so its filter indicator
+        // and ✕ clear button are mounted — otherwise the filter would be invisible and stuck.
+        setChannelFilter: (channelFilter) =>
+          set(channelFilter ? { channelFilter, channelOpen: true } : { channelFilter }),
+        setChannelOpen: (channelOpen) => set({ channelOpen }),
+        focusNode: (nodeId) =>
+          set({
+            highlightIds: [nodeId],
+            channelFilter: null,
+            selectedTicketId: null,
+            selectedStepId: null,
+            reviewOpen: false,
+            mode: 'navigator', // switch to the map so the highlight is visible
+          }),
+        loadMessages: async () => {
+          const pid = get().pid; // guard: a slow response for a previous project must not apply
+          const cur = get().messages;
+          const since = cur.length ? cur[cur.length - 1].id : undefined;
+          try {
+            const newer = await api.getMessages(since);
+            if (get().pid !== pid || !newer.length) return;
+            const existing = get().messages;
+            const maxId = existing.length ? existing[existing.length - 1].id : 0;
+            const toAdd = newer.filter((m) => m.id > maxId); // dedupe against overlapping polls
+            if (toAdd.length) set({ messages: [...existing, ...toAdd] });
+          } catch {
+            /* backend unreachable: keep the messages we have */
+          }
+        },
+        loadAutonomy: async () => {
+          const pid = get().pid; // guard: a slow response for a previous project must not win
+          try {
+            const v = await api.getProjectAutonomy();
+            if (get().pid === pid && get().autonomy !== v.resolved) set({ autonomy: v.resolved });
+          } catch {
+            /* backend unreachable: keep the last known throttle */
+          }
+        },
+        setAutonomy: async (level) => {
+          const v = await api.setProjectAutonomy(level);
+          set({ autonomy: v.resolved });
+        },
         load: async () => {
           try {
             const next = await api.getGraph();
@@ -87,8 +150,13 @@ export const useStore = create<State>()(
         setPid: (pid) => {
           if (get().pid === pid && get().graph) return;
           api.setPid(pid);
-          set({ pid, graph: null, selectedTicketId: null, selectedStepId: null, reviewOpen: false });
+          set({
+            pid, graph: null, selectedTicketId: null, selectedStepId: null,
+            reviewOpen: false, messages: [], highlightIds: null, channelFilter: null,
+          });
           void get().load();
+          void get().loadAutonomy(); // refresh the throttle dial for the new project
+          void get().loadMessages(); // load the new project's channel from scratch
         },
         setError: (error) => set({ error }),
         setMode: (mode) => set({ mode }),

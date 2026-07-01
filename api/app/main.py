@@ -10,10 +10,13 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from .db import init_db
+from .routers import channel as channel_router
+from .routers import governance as governance_router
 from .routers import graph as graph_router
 from .routers import lifecycle as lifecycle_router
 from .routers import memory as memory_router
 from .routers import projects as projects_router
+from .routers import steer as steer_router
 
 logger = logging.getLogger("asv3.main")
 
@@ -43,6 +46,28 @@ async def lifespan(app: FastAPI):
     )
     logging.getLogger("asv3").setLevel(os.getenv("ASV3_LOG_LEVEL", "INFO"))
     init_db()
+    # Crash recovery: a restart mid-execution leaves the async worker's `executing` status
+    # orphaned (the thread is gone). Reset it so the UI isn't frozen. Only in async mode — the
+    # sync test path (ASV3_ASYNC_EXEC=0) has no background workers, so `executing` is transient.
+    if os.getenv("ASV3_ASYNC_EXEC", "1") != "0":
+        from .db import SessionLocal, make_checkpointer
+        from .graph.store import reconcile_stale_execution
+
+        db = SessionLocal()
+        try:
+            reset_tickets = reconcile_stale_execution(db)
+        finally:
+            db.close()
+        if reset_tickets:
+            # the reset tickets' checkpoints are now desynced from the DB (they point mid-run) —
+            # drop them so a re-plan/approve starts clean instead of resuming an abandoned run.
+            cp = make_checkpointer()
+            for tid in reset_tickets:
+                try:
+                    cp.delete_thread(f"ticket:{tid}")
+                except Exception:  # noqa: BLE001 — a missing/undeletable thread must not block startup
+                    logger.exception("could not drop checkpoint for reset ticket %s", tid)
+            logger.info("startup: recovered %d ticket(s) stuck 'executing' from a prior crash/restart", len(reset_tickets))
     yield
 
 
@@ -55,11 +80,16 @@ app.add_middleware(
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
+    # so a cross-origin browser (VITE_API_BASE) can READ the ETag and send If-None-Match
+    expose_headers=["ETag"],
 )
 app.include_router(graph_router.router)
 app.include_router(projects_router.router)
 app.include_router(lifecycle_router.router)
 app.include_router(memory_router.router)
+app.include_router(governance_router.router)
+app.include_router(channel_router.router)
+app.include_router(steer_router.router)
 
 
 @app.get("/health")

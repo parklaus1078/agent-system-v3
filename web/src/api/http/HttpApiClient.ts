@@ -8,6 +8,19 @@ import type {
   ProjectSummary,
   ProjectProposal,
   ProjectCreated,
+  ProjectMeta,
+  ProjectDeleted,
+  Rules,
+  ProjectRules,
+  GlobalModels,
+  ProjectModels,
+  ModelsMap,
+  ModelAvailability,
+  AutonomyLevel,
+  ProjectAutonomy,
+  TicketAutonomy,
+  ChannelMessage,
+  SteerResult,
 } from '../dto';
 
 /** The lifecycle-state envelope returned by the plan/approve/review endpoints. */
@@ -24,6 +37,10 @@ interface LifecycleState {
  *  writes POST and then immediately notify subscribers so the UI re-loads. */
 export class HttpApiClient implements ApiClient {
   private subs = new Set<() => void>();
+  // Conditional-GET cache for /graph: send If-None-Match and reuse the last graph on a 304,
+  // so idle 1.5s polls transfer (and on the server, read) nothing when state is unchanged.
+  private graphEtag: string | null = null;
+  private lastGraph: ProjectGraph | null = null;
 
   constructor(
     private base: string,
@@ -32,6 +49,8 @@ export class HttpApiClient implements ApiClient {
 
   setPid(pid: string): void {
     this.pid = pid;
+    this.graphEtag = null; // drop the previous project's cached graph/etag
+    this.lastGraph = null;
   }
 
   async listProjects(): Promise<ProjectSummary[]> {
@@ -62,6 +81,17 @@ export class HttpApiClient implements ApiClient {
     this.notify(); // a new project appears in the landing list
     return created;
   }
+  // NOT pid-scoped — deletes an arbitrary project by id (from the landing list).
+  async deleteProject(projectId: string, deleteDirectory: boolean): Promise<ProjectDeleted> {
+    const r = await fetch(
+      `${this.base}/projects/${projectId}?delete_directory=${deleteDirectory ? 'true' : 'false'}`,
+      { method: 'DELETE' },
+    );
+    if (!r.ok) throw new Error(`${r.status} DELETE /projects/${projectId}`);
+    const out = (await r.json()) as ProjectDeleted;
+    this.notify(); // the project disappears from the landing list
+    return out;
+  }
 
   private url(path: string): string {
     return `${this.base}/projects/${this.pid}${path}`;
@@ -83,12 +113,46 @@ export class HttpApiClient implements ApiClient {
     return r.json() as Promise<T>;
   }
 
+  private async put<T>(path: string, body: unknown): Promise<T> {
+    const r = await fetch(this.url(path), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) throw new Error(`${r.status} PUT ${path}`);
+    return r.json() as Promise<T>;
+  }
+
+  // Governance global config is NOT pid-scoped (it's the default profile), so it hits the
+  // bare /rules and /models endpoints rather than url()'s /projects/{pid}/* prefix.
+  private async topGet<T>(path: string): Promise<T> {
+    const r = await fetch(`${this.base}${path}`);
+    if (!r.ok) throw new Error(`${r.status} ${path}`);
+    return r.json() as Promise<T>;
+  }
+  private async topPut<T>(path: string, body: unknown): Promise<T> {
+    const r = await fetch(`${this.base}${path}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) throw new Error(`${r.status} PUT ${path}`);
+    return r.json() as Promise<T>;
+  }
+
   private notify() {
     this.subs.forEach((cb) => cb());
   }
 
-  getGraph(): Promise<ProjectGraph> {
-    return this.j('/graph');
+  async getGraph(): Promise<ProjectGraph> {
+    const r = await fetch(this.url('/graph'), {
+      headers: this.graphEtag ? { 'If-None-Match': this.graphEtag } : {},
+    });
+    if (r.status === 304 && this.lastGraph) return this.lastGraph; // unchanged: reuse cached
+    if (!r.ok) throw new Error(`${r.status} /graph`); // preserve offline-indicator behavior
+    this.graphEtag = r.headers.get('ETag');
+    this.lastGraph = (await r.json()) as ProjectGraph;
+    return this.lastGraph;
   }
   getStepDetail(id: string): Promise<StepDetail> {
     return this.j(`/steps/${id}`);
@@ -128,11 +192,73 @@ export class HttpApiClient implements ApiClient {
     });
     this.notify();
   }
+  async setProjectMeta(meta: { title?: string; description?: string }): Promise<ProjectMeta> {
+    const out = await this.post<ProjectMeta>('/meta', meta); // pid-scoped (/projects/{pid}/meta)
+    this.notify();
+    return out;
+  }
   async reviewStep(id: string, action: ReviewAction): Promise<void> {
     const body =
       action.kind === 'changes' ? { kind: 'changes', comment: action.comment } : { kind: action.kind };
     await this.post(`/steps/${id}/review`, body);
     this.notify();
+  }
+
+  // ── CP0 governance ──
+  getGlobalRules(): Promise<Rules> {
+    return this.topGet('/rules');
+  }
+  setGlobalRules(rules: Partial<Rules>): Promise<Rules> {
+    return this.topPut('/rules', rules);
+  }
+  getProjectRules(): Promise<ProjectRules> {
+    return this.j('/rules'); // pid-scoped (/projects/{pid}/rules)
+  }
+  setProjectRules(rules: Partial<Rules>): Promise<ProjectRules> {
+    return this.put('/rules', rules);
+  }
+  getGlobalModels(): Promise<GlobalModels> {
+    return this.topGet('/models');
+  }
+  setGlobalModels(models: ModelsMap): Promise<GlobalModels> {
+    return this.topPut('/models', { models });
+  }
+  getProjectModels(): Promise<ProjectModels> {
+    return this.j('/models'); // pid-scoped (/projects/{pid}/models)
+  }
+  setProjectModels(models: ModelsMap): Promise<ProjectModels> {
+    return this.put('/models', { models });
+  }
+  getModelAvailability(): Promise<ModelAvailability[]> {
+    return this.topGet('/models/available');
+  }
+  getProjectAutonomy(): Promise<ProjectAutonomy> {
+    return this.j('/autonomy'); // pid-scoped (/projects/{pid}/autonomy)
+  }
+  async setProjectAutonomy(level: AutonomyLevel | null): Promise<ProjectAutonomy> {
+    const out = await this.put<ProjectAutonomy>('/autonomy', { level });
+    this.notify();
+    return out;
+  }
+  getTicketAutonomy(ticketId: string): Promise<TicketAutonomy> {
+    return this.j(`/tickets/${ticketId}/autonomy`); // pid-scoped
+  }
+  async setTicketAutonomy(ticketId: string, level: AutonomyLevel | null): Promise<TicketAutonomy> {
+    const out = await this.put<TicketAutonomy>(`/tickets/${ticketId}/autonomy`, { level });
+    this.notify();
+    return out;
+  }
+  getMessages(since?: number): Promise<ChannelMessage[]> {
+    return this.j(since != null ? `/messages?since=${since}` : '/messages'); // pid-scoped
+  }
+  async steer(text: string, scope?: { ticketId?: string; stepId?: string }): Promise<SteerResult> {
+    const out = await this.post<SteerResult>('/steer', {
+      text,
+      ticketId: scope?.ticketId,
+      stepId: scope?.stepId,
+    });
+    this.notify(); // the op changed the graph/channel — re-poll
+    return out;
   }
 
   subscribe(cb: () => void): () => void {

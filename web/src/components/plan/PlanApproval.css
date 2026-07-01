@@ -222,3 +222,28 @@
   font-size: 12px;
   color: var(--faint);
 }
+.plan__desclabel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0 20px 6px;
+}
+.plan__desccap {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--faint);
+}
+.plan__descinput {
+  width: 100%;
+  resize: vertical;
+  min-height: 56px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  background: var(--surface, #fff);
+  color: inherit;
+  box-sizing: border-box;
+}

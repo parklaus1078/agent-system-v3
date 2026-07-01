@@ -1,5 +1,0 @@
-[     156ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://127.0.0.1:5180/node_modules/.vite/deps/chunk-XPR23Y44.js?v=f957d4dc:21548
-[ 3939802ms] [LOG] [vite] server connection lost. Polling for restart... @ http://127.0.0.1:5180/@vite/client:559
-[ 3939804ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5180/:0
-[ 3940806ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5180/:0
-[ 3942249ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://127.0.0.1:5180/node_modules/.vite/deps/chunk-XPR23Y44.js?v=f957d4dc:21548

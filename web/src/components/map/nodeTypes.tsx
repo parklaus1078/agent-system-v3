@@ -33,6 +33,7 @@ function Handles({ target = true, source = true }: { target?: boolean; source?: 
 
 export interface ObjectiveData {
   label: string;
+  description?: string;
   live?: boolean;
   [k: string]: unknown;
 }
@@ -54,6 +55,7 @@ export function ObjectiveNode({ data }: NodeProps) {
         )}
       </div>
       <div className="rf-objective__label">{d.label}</div>
+      {d.description && <div className="rf-objective__desc">{d.description}</div>}
     </div>
   );
 }

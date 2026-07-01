@@ -30,3 +30,23 @@ def diff_of_commit(repo_dir: str, sha: str) -> str:
     parents = _git(repo_dir, "rev-list", "--parents", "-n", "1", sha).split()
     base = parents[1] if len(parents) > 1 else EMPTY_TREE
     return _git(repo_dir, "diff", base, sha)
+
+
+def head_sha(repo_dir: str) -> str | None:
+    """The current HEAD commit sha, or None if the repo has no commits yet."""
+    try:
+        return _git(repo_dir, "rev-parse", "--verify", "-q", "HEAD").strip() or None
+    except subprocess.CalledProcessError:
+        return None
+
+
+def diff_since(repo_dir: str, base: str | None) -> str:
+    """Unified diff of everything committed from `base` (exclusive) up to HEAD — regardless of
+    WHO committed it (a real CLI executor that commits its own work, OR the lifecycle's
+    commit_all). `base=None` diffs from the empty tree (a first commit). This is the robust
+    capture: commit_all returning None (clean tree) no longer means 'no change' when the
+    executor already committed the step's edits itself."""
+    head = head_sha(repo_dir)
+    if head is None or head == base:
+        return ""
+    return _git(repo_dir, "diff", base or EMPTY_TREE, head)

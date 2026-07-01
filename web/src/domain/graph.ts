@@ -28,6 +28,33 @@ export function nodeActivity(n: GraphNode | undefined): NodeActivity | undefined
   const a = n?.data?.activity as NodeActivity | undefined;
   return a && a.state ? a : undefined;
 }
+
+/** A ticket's backlog position (smaller = earlier) — mirrors backend store.ticket_order so the
+ *  map/rail agree with a `reprioritize` steer: an explicit `data.order` wins, else the number in
+ *  its `{slug}-{n}` id suffix (the `t?` also reads the legacy `-t{n}` format). */
+export function ticketOrder(n: GraphNode): number {
+  const o = n.data?.order;
+  if (typeof o === 'number' && Number.isFinite(o)) return o;
+  const m = /-t?(\d+)$/.exec(n.id);
+  return m ? Number(m[1]) : 0;
+}
+
+/** The next ticket id for a project: `{pid}-{n}`, n = highest existing ticket number + 1
+ *  (auto-increment) — mirrors backend store.next_ticket_id so a UI-created ticket gets the same
+ *  `{slug}-{number}` shape as backend-created ones (not an opaque `t-{timestamp}`). */
+export function nextTicketId(g: ProjectGraph, pid: string): string {
+  const nums = g.nodes
+    .filter((n) => n.kind === 'ticket')
+    .map((n) => /-t?(\d+)$/.exec(n.id))
+    .filter((m): m is RegExpExecArray => m !== null)
+    .map((m) => Number(m[1]));
+  return `${pid}-${nums.length ? Math.max(...nums) + 1 : 1}`;
+}
+
+/** Tickets in backlog order (reprioritize-aware). Used by every ticket-listing surface. */
+export function orderedTickets(g: ProjectGraph): GraphNode[] {
+  return g.nodes.filter((n) => n.kind === 'ticket').sort((a, b) => ticketOrder(a) - ticketOrder(b));
+}
 export interface GraphEdge {
   id: string;
   from: string;

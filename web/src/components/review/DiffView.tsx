@@ -25,7 +25,11 @@ function toRows(patch: string): Row[] {
         !l.startsWith('+++') && !l.startsWith('---') && !l.startsWith('@@') && !GIT_HEADER.test(l),
     )
     .map((line, i) => ({
-      line,
+      // Drop the leading unified-diff marker (+/-/space) from the displayed text — the row
+      // color already encodes add/remove, so the sign is redundant. `cls` is still derived
+      // from the ORIGINAL prefixed line, so colors are unchanged; slicing every body line
+      // (incl. context's leading space) keeps columns aligned.
+      line: line.slice(1),
       num: i + 1,
       cls: line.startsWith('+') ? 'add' : line.startsWith('-') ? 'del' : 'ctx',
     }));

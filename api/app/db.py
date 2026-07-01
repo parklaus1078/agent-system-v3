@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import binascii
 import logging
 import os
 from collections.abc import Iterator
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -33,6 +34,42 @@ def _make_engine(url: str):
 
 engine = _make_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine, expire_on_commit=False, class_=Session)
+
+# Per-process nonce mixed into the /graph ETag so a server restart (revision counters reset
+# to 0) invalidates any ETag a client still holds.
+BOOT = binascii.hexlify(os.urandom(4)).decode()
+
+
+# Bump a project's in-process revision counter whenever its nodes/edges actually change, so
+# GET /graph can answer idle polls with a cheap 304 (see graph/revision.py + routers/graph.py).
+# Listeners are bound to SessionLocal (the app/request session); the test `session` fixture
+# uses its own sessionmaker and is intentionally unaffected.
+@event.listens_for(SessionLocal, "after_flush")
+def _track_dirty_pids(session, flush_context):  # noqa: ANN001
+    try:
+        pids = session.info.setdefault("_dirty_pids", set())
+        for obj in (*session.new, *session.dirty, *session.deleted):
+            pid = getattr(obj, "project_id", None)
+            if pid is not None:
+                pids.add(pid)
+    except Exception:  # noqa: BLE001 — a tracking bug must never abort a real commit
+        pass
+
+
+@event.listens_for(SessionLocal, "after_commit")
+def _bump_revisions(session):  # noqa: ANN001
+    try:
+        from .graph import revision  # lazy import to avoid a cycle
+
+        for pid in session.info.pop("_dirty_pids", ()):  # only bump after data is committed
+            revision.bump(pid)
+    except Exception:  # noqa: BLE001
+        pass
+
+
+@event.listens_for(SessionLocal, "after_soft_rollback")
+def _drop_dirty_pids(session, previous_transaction):  # noqa: ANN001
+    session.info.pop("_dirty_pids", None)  # discard pids from a rolled-back flush
 
 
 def init_db(eng=engine) -> None:

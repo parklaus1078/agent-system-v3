@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-import app.routers.lifecycle as lifecycle
+import app.services.governance as governance
 from app.db import SessionLocal, init_db
 from app.graph.store import seed_graph
 from app.main import app
@@ -60,7 +60,7 @@ def test_indexed_decision_reaches_the_executor_prompt(repo, monkeypatch):
             self.write(repo_dir)
             return ExecResult(summary="ok", decision=None, ok=True, output="")
 
-    monkeypatch.setattr(lifecycle, "SimulatedExecutor", CapturingExecutor)
+    monkeypatch.setattr(governance, "SimulatedExecutor", CapturingExecutor)
 
     c = TestClient(app)
     tid = f"{PID}-t1"
@@ -95,7 +95,7 @@ def test_changes_rerun_indexes_the_new_decision(repo, monkeypatch):
             self.write(repo_dir)
             return ExecResult(summary="ok", decision=f"decisiontoken{calls['n']}", ok=True, output="")
 
-    monkeypatch.setattr(lifecycle, "SimulatedExecutor", DecisionExecutor)
+    monkeypatch.setattr(governance, "SimulatedExecutor", DecisionExecutor)
 
     c = TestClient(app)
     tid = "prag2-t1"

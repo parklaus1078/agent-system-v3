@@ -187,6 +187,15 @@ textarea {
   color: var(--ink);
   border-color: transparent;
 }
+.btn--danger {
+  border-color: transparent;
+  background: var(--blocked, #d64545);
+  color: #fff;
+}
+.btn--danger:hover:not(:disabled) {
+  filter: brightness(1.08);
+  border-color: transparent;
+}
 
 /* accessible-only text */
 .sr-only {

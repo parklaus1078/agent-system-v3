@@ -9,6 +9,7 @@ import {
 } from '../../domain/graph';
 import { CheckIcon, ChevronRightIcon, ArrowRightIcon } from '../icons';
 import { ActivityBadge } from '../ActivityBadge';
+import { TicketAutonomyDial } from '../TicketAutonomyDial';
 import './TicketBoard.css';
 
 const STATUS_LABEL: Record<Status, string> = {
@@ -131,6 +132,7 @@ export function TicketBoard() {
           </span>
         </span>
         {hasAwaiting && <span className="board__waiting">리뷰 대기 step이 당신을 기다립니다</span>}
+        <TicketAutonomyDial ticketId={selectedTicketId} />
       </header>
 
       <div className="board__cols">

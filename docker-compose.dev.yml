@@ -1,0 +1,48 @@
+# Hot-reload dev stack — layer OVER docker-compose.yml:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml watch     (or: make dev)
+#
+# `docker compose watch` (Compose Watch, needs Compose v2.22+) syncs your source edits INTO
+# the running containers; uvicorn --reload (api) and vite HMR (web) apply them live — no manual
+# rebuild/restart. Open the vite dev server at http://localhost:5173 (the prod nginx build on
+# :8080 is not used in this mode).
+#
+# What each watch rule does:
+#   action: sync          copy the changed file into the container (server reloads itself)
+#   action: sync+restart  sync, then restart the service (config the server reads once at boot)
+#   action: rebuild       rebuild the image (dependency manifests changed)
+services:
+  api:
+    # add --reload so uvicorn restarts on a synced .py change
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    develop:
+      watch:
+        - action: sync
+          path: ./api/app
+          target: /app/app
+        - action: rebuild
+          path: ./api/pyproject.toml
+
+  web:
+    build:
+      context: ./web
+      target: dev          # the node/vite dev stage, not the nginx prod stage
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
+    environment:
+      # -> HttpApiClient (not the in-browser mock); vite proxies /api to api:8000 (vite.config)
+      VITE_API_BASE: /api
+    ports:
+      - "5173:5173"        # vite dev server + HMR — open http://localhost:5173
+    develop:
+      watch:
+        - action: sync
+          path: ./web/src
+          target: /web/src
+        - action: sync+restart
+          path: ./web/index.html
+          target: /web/index.html
+        - action: sync+restart
+          path: ./web/vite.config.ts
+          target: /web/vite.config.ts
+        - action: rebuild
+          path: ./web/package.json

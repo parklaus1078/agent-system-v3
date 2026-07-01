@@ -1,6 +1,8 @@
 """Phase 3 — live activity field + non-blocking (background-thread) execution."""
 
 import os
+import threading
+import time
 
 import pytest
 from fastapi.testclient import TestClient
@@ -8,6 +10,15 @@ from fastapi.testclient import TestClient
 from app.db import init_db
 from app.main import app
 from app.routers import lifecycle as lc
+
+
+def _block_executor(monkeypatch):
+    """Make the simulated executor park inside its run() on a gate the test releases, so the
+    background worker is observably mid-execution. Returns the gate Event."""
+    gate = threading.Event()
+    orig = lc._sim_write
+    monkeypatch.setattr(lc, "_sim_write", lambda repo_dir, tid: (gate.wait(5), orig(repo_dir, tid)))
+    return gate
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -92,6 +103,54 @@ def test_approve_returns_immediately_then_executes_in_background(client, monkeyp
     assert s1["status"] == "awaiting_review"  # executed + gated in the background
     a = _activity(client, slug, tid)
     assert a and a["state"] == "awaiting_review"
+
+
+def test_running_step_reads_executing_not_planned(client, monkeypatch):
+    # #2 — while a step's executor runs, the step node must read 'executing' (was stuck at
+    # 'planning' so the board looked frozen).
+    monkeypatch.setenv("ASV3_ASYNC_EXEC", "1")
+    gate = _block_executor(monkeypatch)
+    slug = "exec-status"
+    tid = _make_ticket(client, slug)
+    _propose(client, slug, tid)
+    client.post(f"/projects/{slug}/tickets/{tid}/plan/approve", json={})
+    try:
+        s1, seen = f"{tid}-s1", None
+        deadline = time.time() + 3
+        while time.time() < deadline:
+            n = next((x for x in client.get(f"/projects/{slug}/graph").json()["nodes"] if x["id"] == s1), None)
+            if n and n["status"] == "executing":
+                seen = "executing"
+                break
+            time.sleep(0.05)
+        assert seen == "executing"  # the running step left PLANNED for EXECUTING
+    finally:
+        gate.set()
+    _drain()
+    n = next(x for x in client.get(f"/projects/{slug}/graph").json()["nodes"] if x["id"] == s1)
+    assert n["status"] == "awaiting_review"
+
+
+def test_can_propose_other_ticket_while_one_executes(client, monkeypatch):
+    # #3 — the reported bug: proposing a plan for ticket B must NOT block on ticket A's run.
+    monkeypatch.setenv("ASV3_ASYNC_EXEC", "1")
+    gate = _block_executor(monkeypatch)
+    client.post("/projects/approve", json={"slug": "conc", "title": "C", "tickets": [{"title": "A"}, {"title": "B"}]})
+    tickets = [n["id"] for n in client.get("/projects/conc/graph").json()["nodes"] if n["kind"] == "ticket"]
+    ta, tb = tickets[0], tickets[1]
+    try:
+        # ticket A starts executing; its worker parks inside the executor (holds A's exec lock)
+        client.post(f"/projects/conc/tickets/{ta}/plan", json={})
+        client.post(f"/projects/conc/tickets/{ta}/plan/approve", json={})
+        # ... while A runs, propose for ticket B should return promptly (lock-free read/propose)
+        t0 = time.time()
+        r = client.post(f"/projects/conc/tickets/{tb}/plan", json={})
+        elapsed = time.time() - t0
+        assert (r.json().get("awaiting") or {}).get("type") == "plan_approval"
+        assert elapsed < 2.0  # did NOT wait for A's (5s-parked) execution to finish
+    finally:
+        gate.set()
+    _drain()
 
 
 def test_async_review_approve_advances_in_background(client, monkeypatch):

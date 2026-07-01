@@ -25,6 +25,9 @@ export function ProjectInit({
   const [phase, setPhase] = useState<'loading' | 'edit' | 'done'>('loading');
   const [slug, setSlug] = useState('');
   const [title, setTitle] = useState(goal);
+  // The full goal text becomes the project description (the title is only its first line),
+  // so the original intent is preserved + viewable/editable later instead of being discarded.
+  const [description, setDescription] = useState(goal);
   const [tickets, setTickets] = useState<TicketProposal[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -90,6 +93,7 @@ export function ProjectInit({
         slug: slug.trim(),
         title: title.trim() || slug.trim(),
         tickets: tickets.filter((t) => t.title.trim()),
+        description: description.trim() || undefined,
       });
       onCreated?.();
       setCreatedSlug(created.projectId);
@@ -164,6 +168,18 @@ export function ProjectInit({
           aria-label="프로젝트 slug"
           value={slug}
           onChange={(e) => setSlug(e.target.value)}
+        />
+      </label>
+
+      <label className="plan__desclabel">
+        <span className="plan__desccap">설명</span>
+        <textarea
+          className="plan__descinput"
+          aria-label="프로젝트 설명"
+          placeholder="이 프로젝트가 무엇을 만드는지 — 나중에 프로젝트 안에서 다시 보고 수정할 수 있어요."
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          rows={3}
         />
       </label>
 

@@ -96,6 +96,31 @@ def test_layout_persists_node_positions(client):
     assert nodes[tid]["data"]["pos"] == {"x": -5.5, "y": 99}
 
 
+def test_approve_persists_description_and_meta_edit_roundtrips(client):
+    client.post(
+        "/projects/approve",
+        json={"slug": "descp", "title": "Desc proj", "tickets": [{"title": "T"}], "description": "원래 설명 본문"},
+    )
+    # description is stored at creation and surfaced by the landing list
+    summary = next(p for p in client.get("/projects").json() if p["projectId"] == "descp")
+    assert summary["description"] == "원래 설명 본문"
+
+    # edit it later (view+edit inside the project)
+    r = client.post("/projects/descp/meta", json={"title": "새 제목", "description": "고친 설명"})
+    assert r.status_code == 200
+    assert r.json() == {"projectId": "descp", "title": "새 제목", "description": "고친 설명"}
+    obj = next(n for n in client.get("/projects/descp/graph").json()["nodes"] if n["kind"] == "objective")
+    assert obj["label"] == "새 제목" and obj["data"]["description"] == "고친 설명"
+
+    # blank description clears it; omitted title leaves it unchanged
+    r = client.post("/projects/descp/meta", json={"description": "  "})
+    assert r.json()["title"] == "새 제목" and r.json()["description"] is None
+
+
+def test_meta_on_unknown_project_404s(client):
+    assert client.post("/projects/nope/meta", json={"title": "x"}).status_code == 404
+
+
 def test_layout_ignores_unknown_and_foreign_nodes(client):
     client.post("/projects/approve", json={"slug": "layq", "title": "L", "tickets": [{"title": "T"}]})
     r = client.post(

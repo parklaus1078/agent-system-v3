@@ -64,6 +64,17 @@
   font-weight: 600;
   letter-spacing: -0.01em;
 }
+.rf-objective__desc {
+  margin-top: 5px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--faint);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: pre-wrap;
+}
 
 /* ---- ticket ---- */
 .rf-ticket {
